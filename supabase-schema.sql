@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public.produksi (
     id_produk INT REFERENCES public.produk(id_produk) ON DELETE SET NULL,
     tanggal_produksi DATE DEFAULT CURRENT_DATE,
     status_produksi VARCHAR(30) DEFAULT 'menunggu' 
-        CHECK (status_produksi IN ('menunggu', 'diproses', 'siap_diverifikasi', 'selesai')),
+        CHECK (status_produksi IN ('menunggu', 'diproses', 'siap_diverifikasi', 'sedang_dikemas', 'selesai')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
