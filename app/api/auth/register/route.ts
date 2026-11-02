@@ -39,6 +39,21 @@ export async function POST(req: NextRequest) {
     const cleanNoTelp = String(no_telp).trim();
     const cleanAlamat = String(alamat).trim();
 
+    // Validasi tipe data nomor telepon (wajib integer / angka, tidak boleh huruf)
+    if (!/^[0-9]+$/.test(cleanNoTelp)) {
+      return NextResponse.json(
+        { message: 'Nomor telepon harus berupa angka (integer), tidak boleh mengandung huruf atau simbol.' },
+        { status: 400 }
+      );
+    }
+
+    if (cleanNoTelp.length < 9 || cleanNoTelp.length > 15) {
+      return NextResponse.json(
+        { message: 'Nomor telepon harus terdiri dari 9 hingga 15 digit angka.' },
+        { status: 400 }
+      );
+    }
+
     // 1. Cek duplikasi di Supabase jika terkonfigurasi
     if (isSupabaseConfigured) {
       const supabase = getSupabaseServerClient();

@@ -106,8 +106,8 @@ export default function OwnerDashboardPage() {
   const [deskripsiProduk, setDeskripsiProduk] = useState('');
   const [productErrors, setProductErrors] = useState<Record<string, string>>({});
 
-  const fetchLaporan = async () => {
-    setIsLoading(true);
+  const fetchLaporan = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const res = await fetch('/api/laporan');
       const data = await res.json();
@@ -115,14 +115,21 @@ export default function OwnerDashboardPage() {
         setLaporan(data.data);
       }
     } catch (err: any) {
-      console.error('Laporan fetch error:', err);
+      if (!silent) console.error('Laporan fetch error:', err);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchLaporan();
+
+    // Auto-update laporan, omset, dan antrean transaksi live real-time tanpa reload / refresh manual
+    const interval = setInterval(() => {
+      fetchLaporan(true);
+    }, 2500);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Konfirmasi Pembayaran Tunai (UC-12)
@@ -246,7 +253,7 @@ export default function OwnerDashboardPage() {
               + Tambah Katalog Produk
             </button>
             <button
-              onClick={fetchLaporan}
+              onClick={() => fetchLaporan()}
               disabled={isLoading}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition"
             >
@@ -474,7 +481,7 @@ export default function OwnerDashboardPage() {
 
             <div className="flex items-center gap-2.5">
               <button
-                onClick={fetchLaporan}
+                onClick={() => fetchLaporan()}
                 disabled={isLoading}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition"
               >
