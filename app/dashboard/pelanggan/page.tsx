@@ -92,8 +92,8 @@ export default function PelangganDashboardPage() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Fetch data dari Supabase
-  const fetchData = async () => {
-    setIsLoadingData(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setIsLoadingData(true);
     try {
       // 1. Fetch katalog produk
       const resProd = await fetch('/api/produk');
@@ -111,14 +111,21 @@ export default function PelangganDashboardPage() {
         }
       }
     } catch (err: any) {
-      console.error('Fetch error:', err);
+      if (!silent) console.error('Fetch error:', err);
     } finally {
-      setIsLoadingData(false);
+      if (!silent) setIsLoadingData(false);
     }
   };
 
   useEffect(() => {
     fetchData();
+
+    // Auto-update live real-time tanpa perlu refresh manual (setiap 2.5 detik)
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 2500);
+
+    return () => clearInterval(interval);
   }, [pelanggan]);
 
   // Handle Order Submit dengan 4 Jenis Validasi
@@ -232,8 +239,12 @@ export default function PelangganDashboardPage() {
       );
     }
 
+    // Periksa status produksi dan hasil verifikasi mutu
+    const prod = order.produksi?.[0];
+    const hasPassedQC = Boolean(prod?.verifikasi && prod.verifikasi.some((v) => v.status === 'Lolos Verifikasi'));
+
     // 2. Siap Diambil / Selesai
-    if (order.status_pesanan === 'selesai') {
+    if (order.status_pesanan === 'selesai' || prod?.status_produksi === 'selesai') {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-900 border border-emerald-300">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -242,10 +253,7 @@ export default function PelangganDashboardPage() {
       );
     }
 
-    // Periksa status produksi dan hasil verifikasi mutu
-    const prod = order.produksi?.[0];
-    const hasPassedQC = Boolean(prod?.verifikasi && prod.verifikasi.some((v) => v.status === 'Lolos Verifikasi'));
-    const isPacking = prod?.status_produksi === 'sedang_dikemas' || hasPassedQC;
+    const isPacking = (prod?.status_produksi === 'sedang_dikemas' || hasPassedQC) && prod?.status_produksi !== 'selesai' && order.status_pesanan !== 'selesai';
 
     // 3. Sedang Dibungkus / Dikemas (Setelah Lolos QC)
     if (isPacking) {
@@ -334,7 +342,7 @@ export default function PelangganDashboardPage() {
           </div>
 
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             disabled={isLoadingData}
             className="inline-flex items-center gap-1.5 text-xs text-brand-maroon font-bold bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-xl border border-brand-200 transition"
           >

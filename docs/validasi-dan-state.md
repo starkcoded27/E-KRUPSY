@@ -64,8 +64,25 @@ Setiap proses pengiriman data dan pembaruan status di sistem E-KRUPSY menangani 
 
 ### 3. Kondisi Error (`type = 'error'`)
 * Ditampilkan dalam kartu alert berwarna merah dengan ikon `AlertCircle` jika terjadi kesalahan validasi atau kegagalan koneksi database.
-* Menampilkan informasi spesifik bagian apa yang salah sehingga pengguna tahu cara memperbaikinya.
+* Menampilkan informasi spesifik bagian apa yang salah sehingga pengguna tahu cara memperbaikinya dalam **Bahasa Indonesia penuh** (menonaktifkan default browser tooltip bahasa Inggris dengan atribut `noValidate`).
+* Validasi khusus Nomor HP pada Form Registrasi:
+  * Memblokir pengetikan karakter non-digit secara langsung pada level UI (`onKeyDown` & sanitizer regex).
+  * Validasi backend mewajibkan nomor telepon integer-only (`/^[0-9]+$/`) dan panjang 9-15 digit.
 * Contoh pesan:
+  * *"Username tidak boleh kosong, harap isi username Anda."*
+  * *"Nomor HP harus berupa angka (integer), tidak boleh mengandung huruf atau simbol."*
   * *"Stok produk Kerupuk Kentang tidak mencukupi. Sisa stok: 5 Bal."*
   * *"Password minimal harus 6 karakter."*
   * *"Username atau password salah."*
+
+---
+
+## 3. Pembaruan Data Real-Time Tanpa Refresh Halaman (Live Background Polling)
+
+Untuk menjamin kelancaran workflow antar-peran tanpa perlu melakukan *refresh* atau *reload* manual di peramban (F5):
+1. **Background Polling Senyap (Silent Fetching)**: Setiap dashboard (`/dashboard/pelanggan`, `/dashboard/staff-penggoreng`, `/dashboard/staff-pembungkus`, `/dashboard/owner`) memiliki mekanisme pemanggilan berkala (interval 2.5 detik) yang berjalan di latar belakang tanpa memicu spinner layar penuh.
+2. **Sinkronisasi Antar-Role**:
+   * Saat **Pelanggan** membuat pesanan baru, pesanan langsung muncul seketika di dashboard **Staff Penggoreng** dan **Owner**.
+   * Saat **Staff Penggoreng** menyelesaikan penggorengan, kerupuk langsung muncul di antrean verifikasi QC **Staff Pembungkus**.
+   * Saat **Staff Pembungkus** mencatat hasil QC Lolos dan mengemas produk, status pesanan di dashboard **Pelanggan** otomatis berubah menjadi *"3. Sedang Dibungkus / Dikemas"* lalu *"4. Siap Diambil / Selesai"*.
+   * Saat **Owner** mengklik tombol **"ACC LUNAS"**, status pembayaran di dashboard **Pelanggan** langsung berganti dari *"Belum Lunas"* menjadi *"SUDAH LUNAS"* dan total kas masuk pada Laporan Keuangan Owner otomatis bertambah seketika.

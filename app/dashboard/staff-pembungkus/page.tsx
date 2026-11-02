@@ -78,8 +78,8 @@ export default function StaffPembungkusDashboardPage() {
   const [namaPlastik, setNamaPlastik] = useState('Plastik Ukuran 1/2 kg');
   const [jumlahPlastik, setJumlahPlastik] = useState<number>(20);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const [resProd, resStock] = await Promise.all([
         fetch('/api/produksi'),
@@ -92,14 +92,21 @@ export default function StaffPembungkusDashboardPage() {
       if (resProd.ok) setProductionList(dataProd.data || []);
       if (resStock.ok) setStockList(dataStock.data || []);
     } catch (err: any) {
-      console.error('Fetch error pembungkus:', err);
+      if (!silent) console.error('Fetch error pembungkus:', err);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
+
+    // Auto-update live real-time antrean kemas tanpa perlu refresh manual
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 2500);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Submit QC Verifikasi (UC-10) dengan 4 Validasi Input
@@ -260,7 +267,7 @@ export default function StaffPembungkusDashboardPage() {
 
           <div className="mt-4 flex gap-2">
             <button
-              onClick={fetchData}
+              onClick={() => fetchData()}
               disabled={isLoading}
               className="inline-flex items-center gap-1.5 text-xs text-white font-bold bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl border border-white/20 transition"
             >

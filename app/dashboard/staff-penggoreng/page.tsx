@@ -78,8 +78,8 @@ export default function StaffPenggorengDashboardPage() {
   const [jumlahBahan, setJumlahBahan] = useState<number>(50);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const [resProd, resStock] = await Promise.all([
         fetch('/api/produksi'),
@@ -92,14 +92,21 @@ export default function StaffPenggorengDashboardPage() {
       if (resProd.ok) setProductionList(dataProd.data || []);
       if (resStock.ok) setStockList(dataStock.data || []);
     } catch (err: any) {
-      console.error('Error fetch staff penggoreng:', err);
+      if (!silent) console.error('Error fetch staff penggoreng:', err);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
+
+    // Auto-update antrean dan stok live real-time tanpa reload / refresh manual
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 2500);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Handler Update Status Produksi
@@ -207,7 +214,7 @@ export default function StaffPenggorengDashboardPage() {
 
           <div className="mt-4 flex gap-2">
             <button
-              onClick={fetchData}
+              onClick={() => fetchData()}
               disabled={isLoading}
               className="inline-flex items-center gap-1.5 text-xs text-white font-bold bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl border border-white/20 transition"
             >

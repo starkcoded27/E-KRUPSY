@@ -106,7 +106,7 @@ export default function LoginPage() {
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {/* Username or Email Input */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5">
@@ -186,71 +186,7 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-
-        {/* Quick Credentials Accordion / Helper for Master Data */}
-        <div className="mt-5 bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3.5 text-xs">
-          <div className="flex items-center gap-1.5 font-bold text-amber-900 mb-2">
-            <KeyRound className="w-4 h-4 text-amber-700" />
-            <span>Akun Master Internal (Siap Digunakan):</span>
-          </div>
-
-          <div className="space-y-1.5 text-gray-700">
-            {/* Owner */}
-            <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-amber-200/60 shadow-sm">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-amber-600" />
-                <div>
-                  <span className="font-bold text-gray-800 text-[11px] block">Owner (Pimpinan)</span>
-                  <code className="text-[10px] text-gray-500">user: owner | pass: owner123</code>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('owner', 'owner123')}
-                className="text-[10px] font-bold text-brand-maroon bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-lg border border-brand-200 transition"
-              >
-                Isi Otomatis
-              </button>
-            </div>
-
-            {/* Staff Penggoreng */}
-            <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-amber-200/60 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Flame className="w-4 h-4 text-orange-600" />
-                <div>
-                  <span className="font-bold text-gray-800 text-[11px] block">Staf Penggoreng</span>
-                  <code className="text-[10px] text-gray-500">user: penggoreng | pass: goreng123</code>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('penggoreng', 'goreng123')}
-                className="text-[10px] font-bold text-brand-maroon bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-lg border border-brand-200 transition"
-              >
-                Isi Otomatis
-              </button>
-            </div>
-
-            {/* Staff Pembungkus */}
-            <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-amber-200/60 shadow-sm">
-              <div className="flex items-center gap-2">
-                <PackageCheck className="w-4 h-4 text-blue-600" />
-                <div>
-                  <span className="font-bold text-gray-800 text-[11px] block">Staf Pembungkus</span>
-                  <code className="text-[10px] text-gray-500">user: pembungkus | pass: bungkus123</code>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('pembungkus', 'bungkus123')}
-                className="text-[10px] font-bold text-brand-maroon bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-lg border border-brand-200 transition"
-              >
-                Isi Otomatis
-              </button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
   );
 }

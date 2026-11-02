@@ -39,43 +39,85 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    let value = e.target.value;
+    
+    // Nomor HP wajib angka (integer only, hapus huruf dan simbol otomatis)
+    if (e.target.name === 'no_telp') {
+      value = value.replace(/\D/g, '');
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [e.target.name]: value,
     }));
+
+    // Bersihkan pesan error saat user mengetik
     setErrorMessage('');
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[e.target.name];
+        return next;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+    const errors: Record<string, string> = {};
 
-    // Validasi form
-    if (
-      !formData.nama_lengkap.trim() ||
-      !formData.username.trim() ||
-      !formData.email.trim() ||
-      !formData.password ||
-      !formData.no_telp.trim() ||
-      !formData.alamat.trim()
-    ) {
-      setErrorMessage('Harap lengkapi semua data wajib pada formulir pendaftaran.');
+    // 1. Validasi Keberadaan (Existence Check) - Bahasa Indonesia
+    if (!formData.nama_lengkap.trim()) {
+      errors.nama_lengkap = 'Nama lengkap wajib diisi.';
+    }
+    if (!formData.username.trim()) {
+      errors.username = 'Username tidak boleh kosong, harap isi username Anda.';
+    }
+    if (!formData.email.trim()) {
+      errors.email = 'Email tidak boleh kosong, harap isi alamat email Anda.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errors.email = 'Format email tidak valid (contoh: nama@email.com).';
+    }
+
+    // 2. Validasi Nomor HP: Wajib Angka (Integer / Numeric Only, gaboleh huruf)
+    if (!formData.no_telp.trim()) {
+      errors.no_telp = 'Nomor HP/WhatsApp tidak boleh kosong, harap isi nomor HP Anda.';
+    } else if (!/^[0-9]+$/.test(formData.no_telp.trim())) {
+      errors.no_telp = 'Nomor HP harus berupa angka (integer), tidak boleh mengandung huruf atau simbol.';
+    } else if (formData.no_telp.trim().length < 9 || formData.no_telp.trim().length > 15) {
+      errors.no_telp = 'Nomor HP harus terdiri dari 9 hingga 15 digit angka.';
+    }
+
+    if (!formData.alamat.trim()) {
+      errors.alamat = 'Alamat lengkap pengiriman wajib diisi.';
+    }
+
+    if (!formData.password) {
+      errors.password = 'Password tidak boleh kosong, harap buat password Anda.';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password minimal harus 6 karakter.';
+    }
+
+    if (!formData.confirm_password) {
+      errors.confirm_password = 'Harap ulangi password pada konfirmasi password.';
+    } else if (formData.password !== formData.confirm_password) {
+      errors.confirm_password = 'Konfirmasi password tidak cocok dengan password yang diinput.';
+    }
+
+    // Jika ada error validasi
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstKey = Object.keys(errors)[0];
+      setErrorMessage(errors[firstKey]);
       return;
     }
 
-    if (formData.password.length < 6) {
-      setErrorMessage('Password minimal harus 6 karakter.');
-      return;
-    }
-
-    if (formData.password !== formData.confirm_password) {
-      setErrorMessage('Konfirmasi password tidak sesuai dengan password yang diinput.');
-      return;
-    }
-
+    setFieldErrors({});
     setIsSubmitting(true);
 
     try {
@@ -156,7 +198,7 @@ export default function RegisterPage() {
         )}
 
         {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {/* Nama Lengkap */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
@@ -172,10 +214,19 @@ export default function RegisterPage() {
                 value={formData.nama_lengkap}
                 onChange={handleChange}
                 placeholder="Masukkan nama lengkap Anda"
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:border-transparent transition"
-                required
+                className={`w-full pl-10 pr-4 py-2.5 rounded-2xl text-sm focus:outline-none transition ${
+                  fieldErrors.nama_lengkap
+                    ? 'border-2 border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-400'
+                    : 'bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-maroon focus:border-transparent'
+                }`}
               />
             </div>
+            {fieldErrors.nama_lengkap && (
+              <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center gap-1 animate-fadeIn">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {fieldErrors.nama_lengkap}
+              </p>
+            )}
           </div>
 
           {/* Username & Email Grid */}
@@ -190,9 +241,18 @@ export default function RegisterPage() {
                 value={formData.username}
                 onChange={handleChange}
                 placeholder="cth: budiman123"
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:border-transparent transition"
-                required
+                className={`w-full px-3.5 py-2.5 rounded-2xl text-sm focus:outline-none transition ${
+                  fieldErrors.username
+                    ? 'border-2 border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-400'
+                    : 'bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-maroon focus:border-transparent'
+                }`}
               />
+              {fieldErrors.username && (
+                <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center gap-1 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {fieldErrors.username}
+                </p>
+              )}
             </div>
 
             <div>
@@ -209,10 +269,19 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="nama@email.com"
-                  className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:border-transparent transition"
-                  required
+                  className={`w-full pl-9 pr-3.5 py-2.5 rounded-2xl text-sm focus:outline-none transition ${
+                    fieldErrors.email
+                      ? 'border-2 border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-400'
+                      : 'bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-maroon focus:border-transparent'
+                  }`}
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center gap-1 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
           </div>
 
@@ -220,7 +289,7 @@ export default function RegisterPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                No. Telepon / WhatsApp <span className="text-red-500">*</span>
+                No. Telepon / WhatsApp <span className="text-red-500">*</span> <span className="text-[10px] text-gray-400 font-normal">(Hanya Angka)</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -228,14 +297,36 @@ export default function RegisterPage() {
                 </div>
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   name="no_telp"
                   value={formData.no_telp}
                   onChange={handleChange}
+                  onKeyDown={(e) => {
+                    // Cegah input huruf & karakter spesial (hanya angka 0-9 & tombol navigasi)
+                    if (
+                      !/[0-9]/.test(e.key) &&
+                      !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key) &&
+                      !e.ctrlKey &&
+                      !e.metaKey
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
                   placeholder="08123456789"
-                  className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:border-transparent transition"
-                  required
+                  className={`w-full pl-9 pr-3.5 py-2.5 rounded-2xl text-sm focus:outline-none transition ${
+                    fieldErrors.no_telp
+                      ? 'border-2 border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-400'
+                      : 'bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-maroon focus:border-transparent'
+                  }`}
                 />
               </div>
+              {fieldErrors.no_telp && (
+                <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center gap-1 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {fieldErrors.no_telp}
+                </p>
+              )}
             </div>
 
             <div>
@@ -269,10 +360,19 @@ export default function RegisterPage() {
                 value={formData.alamat}
                 onChange={handleChange}
                 placeholder="Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang"
-                className="w-full pl-9 pr-3.5 py-2 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:border-transparent transition resize-none"
-                required
+                className={`w-full pl-9 pr-3.5 py-2 rounded-2xl text-sm focus:outline-none transition resize-none ${
+                  fieldErrors.alamat
+                    ? 'border-2 border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-400'
+                    : 'bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-maroon focus:border-transparent'
+                }`}
               />
             </div>
+            {fieldErrors.alamat && (
+              <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center gap-1 animate-fadeIn">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {fieldErrors.alamat}
+              </p>
+            )}
           </div>
 
           {/* Password & Confirm Password */}
@@ -291,8 +391,11 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Min. 6 karakter"
-                  className="w-full pl-9 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:border-transparent transition"
-                  required
+                  className={`w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm focus:outline-none transition ${
+                    fieldErrors.password
+                      ? 'border-2 border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-400'
+                      : 'bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-maroon focus:border-transparent'
+                  }`}
                 />
                 <button
                   type="button"
@@ -302,6 +405,12 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center gap-1 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
 
             <div>
@@ -318,10 +427,19 @@ export default function RegisterPage() {
                   value={formData.confirm_password}
                   onChange={handleChange}
                   placeholder="Ulangi password"
-                  className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:border-transparent transition"
-                  required
+                  className={`w-full pl-9 pr-3.5 py-2.5 rounded-2xl text-sm focus:outline-none transition ${
+                    fieldErrors.confirm_password
+                      ? 'border-2 border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-400'
+                      : 'bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-maroon focus:border-transparent'
+                  }`}
                 />
               </div>
+              {fieldErrors.confirm_password && (
+                <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center gap-1 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {fieldErrors.confirm_password}
+                </p>
+              )}
             </div>
           </div>
 
