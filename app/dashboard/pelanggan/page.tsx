@@ -24,7 +24,15 @@ import {
   Banknote, 
   Building2,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  Upload,
+  Image as ImageIcon,
+  Copy,
+  Check,
+  Receipt,
+  Eye,
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 
 interface Produk {
@@ -52,6 +60,8 @@ interface Pesanan {
     metode_pembayaran: string;
     status_pembayaran: string;
     jumlah_bayar: number;
+    bukti_transfer?: string | null;
+    tanggal_pembayaran?: string;
   }[];
   produksi?: {
     id_produksi: number;
@@ -82,6 +92,22 @@ export default function PelangganDashboardPage() {
 
   // State Modal Resi / Bukti Bayar
   const [selectedOrderReceipt, setSelectedOrderReceipt] = useState<Pesanan | null>(null);
+
+  // State Modal QRIS & Struk
+  const [qrisModalOrder, setQrisModalOrder] = useState<Pesanan | null>(null);
+  const [isProcessingQris, setIsProcessingQris] = useState(false);
+  const [qrisReceiptData, setQrisReceiptData] = useState<any | null>(null);
+
+  // State Modal Upload Bukti Transfer Bank
+  const [uploadTransferOrder, setUploadTransferOrder] = useState<Pesanan | null>(null);
+  const [transferImage, setTransferImage] = useState<string | null>(null);
+  const [transferBank, setTransferBank] = useState<string>('Bank BCA (139-082-9912 a/n Bapak Diansyah)');
+  const [transferCatatan, setTransferCatatan] = useState<string>('');
+  const [isUploadingTransfer, setIsUploadingTransfer] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
+
+  // State Modal Pratinjau Gambar Bukti Transfer
+  const [previewProof, setPreviewProof] = useState<{ image: string; orderId: number; title: string } | null>(null);
 
   // 3 Kondisi Sistem (State)
   const [actionState, setActionState] = useState<{ type: StateType; message: string | null }>({
@@ -191,12 +217,178 @@ export default function PelangganDashboardPage() {
 
       // Refresh data & switch to Pesanan Saya
       await fetchData();
-      setTimeout(() => {
-        setSelectedProduct(null);
-        setActiveTab('pesanan_saya');
-      }, 1500);
+
+      if (orderMetode === 'qris' && resData.data) {
+        const createdOrder: Pesanan = {
+          ...resData.data,
+          produk: selectedProduct,
+          pembayaran: [
+            {
+              id_pembayaran: 0,
+              metode_pembayaran: 'qris',
+              status_pembayaran: 'pending',
+              jumlah_bayar: Number(selectedProduct.harga) * Number(orderQty),
+            }
+          ]
+        };
+        setTimeout(() => {
+          setSelectedProduct(null);
+          setActiveTab('pesanan_saya');
+          setQrisModalOrder(createdOrder);
+          setQrisReceiptData(null);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setSelectedProduct(null);
+          setActiveTab('pesanan_saya');
+        }, 1000);
+      }
     } catch (err: any) {
       setActionState({ type: 'error', message: 'Terjadi kegagalan jaringan saat menyimpan pesanan.' });
+    }
+  };
+
+  // Salin Nomor Rekening Bank
+  const handleCopyAccount = (number: string, label: string) => {
+    navigator.clipboard.writeText(number);
+    setCopiedAccount(label);
+    setTimeout(() => setCopiedAccount(null), 2000);
+  };
+
+  // Baca & Kompres Gambar Screenshot Bukti Transfer Bank
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setActionState({ type: 'error', message: 'File harus berupa gambar (JPG, PNG, JPEG, WebP).' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setTransferImage(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Submit Bukti Transfer Bank
+  const handleSubmitTransferProof = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadTransferOrder) return;
+    if (!transferImage) {
+      setActionState({ type: 'error', message: 'Silakan pilih file screenshot bukti transfer Anda terlebih dahulu.' });
+      return;
+    }
+
+    setIsUploadingTransfer(true);
+    setActionState({ type: 'loading', message: 'Mengirim screenshot bukti transfer ke sistem...' });
+
+    try {
+      const res = await fetch(`/api/pesanan/${uploadTransferOrder.id_pesanan}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upload_transfer',
+          bukti_transfer: transferImage,
+          bank_tujuan: transferBank,
+          catatan: transferCatatan,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal mengirim bukti transfer.' });
+        return;
+      }
+
+      setActionState({
+        type: 'success',
+        message: 'Bukti transfer berhasil dikirim! Owner akan memverifikasi dan meng-ACC lunas.',
+      });
+
+      setUploadTransferOrder(null);
+      setTransferImage(null);
+      setTransferCatatan('');
+      await fetchData();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat mengirim bukti transfer.' });
+    } finally {
+      setIsUploadingTransfer(false);
+    }
+  };
+
+  // Proses Simulasi Scan & Bayar QRIS Instan
+  const handlePayQris = async (order: Pesanan) => {
+    setIsProcessingQris(true);
+    setActionState({ type: 'loading', message: 'Memproses verifikasi QRIS & transfer ke E-Wallet/Rekening Owner...' });
+
+    try {
+      const refId = `QRIS-KD-${Date.now().toString().slice(-8)}`;
+      const res = await fetch(`/api/pesanan/${order.id_pesanan}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pay_qris',
+          ref_id: refId,
+          amount: order.total_harga,
+          customer_name: pelanggan?.nama_lengkap || user?.nama || 'Pelanggan',
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal menyelesaikan pembayaran QRIS.' });
+        return;
+      }
+
+      setQrisReceiptData({
+        ref_id: refId,
+        orderId: order.id_pesanan,
+        amount: order.total_harga,
+        productName: order.produk?.nama_produk || 'Kerupuk Diansyah',
+        qty: order.jumlah,
+        satuan: order.produk?.satuan || 'Bal',
+        varian: order.varian_rasa,
+        kemasan: order.ukuran_plastik,
+        customerName: pelanggan?.nama_lengkap || user?.nama || 'Pelanggan',
+        paidAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        destination: 'E-Wallet / Rekening Bapak Diansyah (Pabrik Kerupuk Diansyah)',
+        nmid: 'ID102034981290',
+      });
+
+      setActionState({
+        type: 'success',
+        message: 'Pembayaran QRIS Berhasil! Dana otomatis masuk ke Rekening / E-Wallet Owner.',
+      });
+
+      await fetchData();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat verifikasi QRIS.' });
+    } finally {
+      setIsProcessingQris(false);
     }
   };
 
@@ -498,60 +690,163 @@ export default function PelangganDashboardPage() {
                         </div>
                       </div>
 
-                      {/* STATUS PEMBAYARAN: BELUM LUNAS vs SUDAH LUNAS */}
-                      {!isPaid ? (
-                        <div className="mb-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
-                              <AlertCircle className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-amber-900 uppercase tracking-wide">
-                                  Status Pembayaran: Belum Lunas
-                                </span>
-                                <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full">
-                                  Menunggu Pembayaran
-                                </span>
-                              </div>
-                              <span className="text-[11px] text-amber-700 mt-0.5 block leading-tight">
-                                Silakan selesaikan pembayaran tunai kepada Owner/Kasir saat mengambil pesanan di pabrik.
-                              </span>
-                            </div>
-                          </div>
-                          <span className="text-xs font-mono font-bold text-amber-800">
-                            Tagihan: Rp {Number(order.total_harga).toLocaleString('id-ID')}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="mb-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
+                      {/* STATUS PEMBAYARAN KHUSUS TIAP METODE */}
+                      <div className={`mb-3 p-4 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-3 ${
+                        isPaid 
+                          ? 'bg-emerald-50/80 border-emerald-200' 
+                          : payInfo?.metode_pembayaran === 'transfer' && payInfo?.bukti_transfer
+                          ? 'bg-blue-50/80 border-blue-200'
+                          : 'bg-amber-50/80 border-amber-200'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                            isPaid 
+                              ? 'bg-emerald-100 text-emerald-700' 
+                              : payInfo?.metode_pembayaran === 'transfer' && payInfo?.bukti_transfer
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {isPaid ? (
                               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-emerald-900 uppercase tracking-wide">
-                                  Status Pembayaran: Sudah Lunas
-                                </span>
-                                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-full">
-                                  ✓ Terverifikasi Owner
-                                </span>
-                              </div>
-                              <span className="text-[11px] text-emerald-700 mt-0.5 block leading-tight">
-                                Pembayaran sah tercatat di sistem. Tunjukkan tanda lunas saat pengambilan kerupuk.
-                              </span>
-                            </div>
+                            ) : payInfo?.metode_pembayaran === 'qris' ? (
+                              <QrCode className="w-5 h-5 text-amber-600" />
+                            ) : payInfo?.metode_pembayaran === 'transfer' ? (
+                              <Building2 className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <AlertCircle className="w-5 h-5 text-amber-600" />
+                            )}
                           </div>
-                          <span className="text-xs font-bold text-emerald-700 bg-white/80 px-2.5 py-1 rounded-lg border border-emerald-200">
-                            LUNAS (Kasir Pabrik)
-                          </span>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-black uppercase tracking-wide text-gray-900">
+                                Metode: {payInfo?.metode_pembayaran || 'Tunai'}
+                              </span>
+                              {isPaid ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-200 text-emerald-950 rounded-full">
+                                  ✓ SUDAH LUNAS {payInfo?.metode_pembayaran === 'qris' ? '(QRIS OTOMATIS)' : '(DI-ACC OWNER)'}
+                                </span>
+                              ) : payInfo?.metode_pembayaran === 'transfer' && payInfo?.bukti_transfer ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-200 text-blue-950 rounded-full">
+                                  ✓ BUKTI TERKIRIM (MENUNGGU ACC OWNER)
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-200 text-amber-950 rounded-full">
+                                  BELUM LUNAS (MENUNGGU PEMBAYARAN)
+                                </span>
+                              )}
+                            </div>
+
+                            <span className="text-[11px] mt-1 block leading-tight text-gray-600">
+                              {isPaid ? (
+                                payInfo?.metode_pembayaran === 'qris'
+                                  ? 'Pembayaran QRIS telah diverifikasi secara otomatis & dana telah masuk ke e-wallet owner.'
+                                  : 'Pembayaran sah dan telah diverifikasi oleh kasir/owner pabrik.'
+                              ) : payInfo?.metode_pembayaran === 'qris' ? (
+                                'Silakan klik tombol "Buka & Scan QRIS" di samping untuk men-scan kode QR dan menyelesaikan pembayaran.'
+                              ) : payInfo?.metode_pembayaran === 'transfer' ? (
+                                payInfo?.bukti_transfer
+                                  ? 'Foto bukti transfer Anda telah tersimpan dan sedang diperiksa oleh Owner.'
+                                  : 'Silakan transfer ke nomor rekening pabrik (BCA/Mandiri/BRI) lalu unggah foto screenshot bukti transfer.'
+                              ) : (
+                                'Silakan selesaikan pembayaran tunai kepada Owner/Kasir saat mengambil pesanan di pabrik (COD).'
+                              )}
+                            </span>
+                          </div>
                         </div>
-                      )}
+
+                        {/* Tombol Interaktif Spesifik Pembayaran */}
+                        <div className="flex flex-wrap items-center gap-2 self-end md:self-center">
+                          {/* 1. Tombol QRIS: Buka QRIS saat belum lunas */}
+                          {!isPaid && payInfo?.metode_pembayaran === 'qris' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQrisModalOrder(order);
+                                setQrisReceiptData(null);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold rounded-xl text-xs shadow-md transition active:scale-95"
+                            >
+                              <QrCode className="w-4 h-4 text-amber-300" />
+                              <span>Buka & Scan QRIS</span>
+                            </button>
+                          )}
+
+                          {/* 2. Tombol QRIS: Lihat Struk Resmi saat sudah lunas */}
+                          {isPaid && payInfo?.metode_pembayaran === 'qris' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                let meta: any = null;
+                                try {
+                                  meta = payInfo?.bukti_transfer ? JSON.parse(payInfo.bukti_transfer) : null;
+                                } catch (e) {}
+                                setQrisReceiptData({
+                                  ref_id: meta?.ref_id || `QRIS-KD-${order.id_pesanan}`,
+                                  orderId: order.id_pesanan,
+                                  amount: order.total_harga,
+                                  productName: order.produk?.nama_produk || 'Kerupuk Diansyah',
+                                  qty: order.jumlah,
+                                  satuan: order.produk?.satuan || 'Bal',
+                                  varian: order.varian_rasa,
+                                  kemasan: order.ukuran_plastik,
+                                  customerName: pelanggan?.nama_lengkap || user?.nama || 'Pelanggan',
+                                  paidAt: meta?.paid_at ? new Date(meta.paid_at).toLocaleString('id-ID') : order.tanggal_pesanan,
+                                  destination: 'E-Wallet / Rekening Bapak Diansyah (Pabrik Kerupuk Diansyah)',
+                                  nmid: 'ID102034981290',
+                                });
+                                setQrisModalOrder(order);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition active:scale-95"
+                            >
+                              <Receipt className="w-4 h-4" />
+                              <span>Lihat Struk QRIS</span>
+                            </button>
+                          )}
+
+                          {/* 3. Tombol Transfer: Upload Bukti Pembayaran */}
+                          {payInfo?.metode_pembayaran === 'transfer' && (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUploadTransferOrder(order);
+                                  setTransferImage(null);
+                                  setTransferCatatan('');
+                                }}
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-2 font-bold rounded-xl text-xs shadow-md transition active:scale-95 ${
+                                  payInfo?.bukti_transfer
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    : 'bg-brand-maroon hover:bg-brand-darkmaroon text-white'
+                                }`}
+                              >
+                                <Upload className="w-4 h-4" />
+                                <span>{payInfo?.bukti_transfer ? 'Ganti Bukti Transfer' : 'Upload Bukti Transfer'}</span>
+                              </button>
+
+                              {payInfo?.bukti_transfer && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPreviewProof({
+                                      image: payInfo.bukti_transfer!,
+                                      orderId: order.id_pesanan,
+                                      title: `Bukti Transfer Pesanan #${order.id_pesanan}`,
+                                    });
+                                  }}
+                                  className="p-2 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 font-bold transition shadow-sm"
+                                  title="Pratinjau Bukti Transfer"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
                       <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-end gap-2">
                         {/* Batalkan Pesanan jika masih menunggu_diproses */}
-                        {order.status_pesanan === 'menunggu_diproses' && (
+                        {order.status_pesanan === 'menunggu_diproses' && !isPaid && (
                           <button
                             onClick={() => handleCancelOrder(order.id_pesanan)}
                             className="inline-flex items-center gap-1.5 text-xs text-red-600 hover:bg-red-50 font-bold px-3 py-2 rounded-xl border border-red-200 transition"
@@ -712,6 +1007,90 @@ export default function PelangganDashboardPage() {
                       <span>Transfer Bank</span>
                     </button>
                   </div>
+
+                  {/* Keterangan Pembayaran Dinamis */}
+                  {orderMetode === 'transfer' && (
+                    <div className="mt-3 p-3 rounded-2xl bg-blue-50/80 border border-blue-200 text-xs space-y-2 animate-fadeIn">
+                      <div className="flex items-center gap-1.5 text-blue-900 font-bold">
+                        <Building2 className="w-4 h-4 text-blue-700" />
+                        <span>Rekening Resmi Pabrik Kerupuk Diansyah:</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
+                          <div>
+                            <span className="font-bold text-gray-900 text-[11px] block">Bank BCA (Transfer)</span>
+                            <span className="font-mono font-black text-blue-900 text-xs">139-082-9912</span>
+                            <span className="text-[10px] text-gray-400 block">a/n Bapak Diansyah</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyAccount('1390829912', 'BCA')}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
+                          >
+                            {copiedAccount === 'BCA' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedAccount === 'BCA' ? 'Tersalin' : 'Salin'}</span>
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
+                          <div>
+                            <span className="font-bold text-gray-900 text-[11px] block">Bank Mandiri (Transfer)</span>
+                            <span className="font-mono font-black text-blue-900 text-xs">182-000-482-991</span>
+                            <span className="text-[10px] text-gray-400 block">a/n Pabrik Kerupuk Diansyah</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyAccount('182000482991', 'Mandiri')}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
+                          >
+                            {copiedAccount === 'Mandiri' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedAccount === 'Mandiri' ? 'Tersalin' : 'Salin'}</span>
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
+                          <div>
+                            <span className="font-bold text-gray-900 text-[11px] block">Bank BRI (Transfer)</span>
+                            <span className="font-mono font-black text-blue-900 text-xs">0123-01-089921-50-3</span>
+                            <span className="text-[10px] text-gray-400 block">a/n Diansyah</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyAccount('012301089921503', 'BRI')}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
+                          >
+                            {copiedAccount === 'BRI' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedAccount === 'BRI' ? 'Tersalin' : 'Salin'}</span>
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-blue-700 leading-tight">
+                        📸 <strong>Wajib Screenshot Bukti Pembayaran:</strong> Setelah transfer, Anda dapat mengunggah foto bukti transfer di tab <strong>Pesanan Saya</strong> untuk divalidasi oleh Owner.
+                      </p>
+                    </div>
+                  )}
+
+                  {orderMetode === 'qris' && (
+                    <div className="mt-3 p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs space-y-1.5 animate-fadeIn">
+                      <div className="flex items-center gap-1.5 text-amber-900 font-bold">
+                        <QrCode className="w-4 h-4 text-amber-700" />
+                        <span>Pembayaran Otomatis QRIS Nasional:</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        Setelah pesanan dikirim, kode QR QRIS resmi perusahaan akan langsung muncul di layar untuk di-scan menggunakan <strong>BCA, Livin, BRImo, GoPay, OVO, Dana, ShopeePay</strong>. Dana otomatis masuk ke e-wallet owner & struk lunas otomatis terbit.
+                      </p>
+                    </div>
+                  )}
+
+                  {orderMetode === 'tunai' && (
+                    <div className="mt-3 p-3 rounded-2xl bg-gray-50 border border-gray-200 text-xs space-y-1 animate-fadeIn">
+                      <div className="flex items-center gap-1.5 text-gray-800 font-bold">
+                        <Banknote className="w-4 h-4 text-emerald-600" />
+                        <span>Pembayaran Tunai Fisik (COD):</span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 leading-relaxed">
+                        Selesaikan pembayaran tunai langsung kepada kasir / Owner saat serah terima kerupuk di pabrik.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Total Ringkasan Biaya */}
@@ -835,6 +1214,417 @@ export default function PelangganDashboardPage() {
                   className="w-full py-3 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-2xl shadow-md transition"
                 >
                   Tutup Tampilan Tanda Lunas
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODAL 3: SCAN QRIS & STRUK RESMI PEMBAYARAN QRIS */}
+        {/* ========================================================================= */}
+        {qrisModalOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative max-h-[92vh] overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setQrisModalOrder(null);
+                  setQrisReceiptData(null);
+                }}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition print:hidden"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* TAMPILAN 1: KODE QRIS UNTUK DI-SCAN (JIKA BELUM BAYAR) */}
+              {!qrisReceiptData ? (
+                <div className="space-y-4">
+                  {/* Banner QRIS Standar Pembayaran Nasional */}
+                  <div className="rounded-2xl overflow-hidden border border-red-200 shadow-sm">
+                    <div className="bg-gradient-to-r from-red-600 to-rose-700 text-white p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-white text-red-700 font-black text-xs px-2 py-0.5 rounded tracking-wider">
+                          QRIS
+                        </div>
+                        <span className="text-[10px] font-bold tracking-tight uppercase">Standar Pembayaran Nasional</span>
+                      </div>
+                      <span className="text-[9px] font-mono bg-white/20 px-2 py-0.5 rounded">GPN / BI</span>
+                    </div>
+
+                    <div className="p-4 text-center bg-gray-50/50">
+                      <h3 className="font-black text-gray-900 text-base uppercase tracking-tight">PABRIK KERUPUK DIANSYAH</h3>
+                      <p className="text-[10px] text-gray-500 font-mono mt-0.5">NMID: ID102034981290</p>
+                      <p className="text-[10px] text-gray-400">Penyedia: Bank Indonesia / Interkoneksi Pembayaran Digital</p>
+
+                      {/* Visual QR Code Bersih & Realistis */}
+                      <div className="my-3">
+                        <svg className="w-52 h-52 mx-auto bg-white p-2.5 rounded-2xl shadow-inner border border-gray-200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="200" height="200" fill="white"/>
+                          {/* Corner Markers */}
+                          <rect x="15" y="15" width="45" height="45" fill="#111827" rx="6"/>
+                          <rect x="23" y="23" width="29" height="29" fill="white" rx="3"/>
+                          <rect x="30" y="30" width="15" height="15" fill="#111827" rx="2"/>
+
+                          <rect x="140" y="15" width="45" height="45" fill="#111827" rx="6"/>
+                          <rect x="148" y="23" width="29" height="29" fill="white" rx="3"/>
+                          <rect x="155" y="30" width="15" height="15" fill="#111827" rx="2"/>
+
+                          <rect x="15" y="140" width="45" height="45" fill="#111827" rx="6"/>
+                          <rect x="23" y="148" width="29" height="29" fill="white" rx="3"/>
+                          <rect x="30" y="155" width="15" height="15" fill="#111827" rx="2"/>
+
+                          {/* Data Pattern Modules */}
+                          <rect x="70" y="20" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="92" y="20" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="114" y="20" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="80" y="36" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="102" y="36" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="124" y="36" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="70" y="52" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="92" y="52" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="114" y="52" width="12" height="12" fill="#111827" rx="1"/>
+
+                          <rect x="20" y="70" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="38" y="80" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="52" y="70" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="20" y="92" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="38" y="104" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="52" y="116" width="12" height="12" fill="#111827" rx="1"/>
+
+                          {/* Center Emblem */}
+                          <rect x="68" y="68" width="64" height="64" fill="#991b1b" rx="12"/>
+                          <rect x="72" y="72" width="56" height="56" fill="white" rx="8"/>
+                          <text x="100" y="97" textAnchor="middle" fill="#991b1b" fontSize="13" fontWeight="900" fontFamily="sans-serif">QRIS</text>
+                          <text x="100" y="111" textAnchor="middle" fill="#1f2937" fontSize="7" fontWeight="bold" fontFamily="sans-serif">DIANSYAH</text>
+
+                          {/* Right & Bottom Modules */}
+                          <rect x="140" y="70" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="162" y="82" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="176" y="70" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="140" y="98" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="162" y="110" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="176" y="122" width="12" height="12" fill="#111827" rx="1"/>
+
+                          <rect x="70" y="140" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="92" y="152" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="114" y="140" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="80" y="168" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="102" y="178" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="124" y="168" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="140" y="140" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="162" y="152" width="12" height="12" fill="#111827" rx="1"/>
+                          <rect x="176" y="168" width="12" height="12" fill="#111827" rx="1"/>
+                        </svg>
+                      </div>
+
+                      {/* Box Nominal Pembayaran */}
+                      <div className="bg-amber-100/70 border border-amber-300 rounded-2xl p-2.5">
+                        <span className="text-[11px] font-bold text-amber-900 block">TOTAL TAGIHAN PEMBAYARAN:</span>
+                        <span className="text-xl font-black text-brand-maroon font-mono">
+                          Rp {Number(qrisModalOrder.total_harga).toLocaleString('id-ID')}
+                        </span>
+                        <span className="text-[10px] text-amber-800 block mt-0.5">
+                          Pesanan #{qrisModalOrder.id_pesanan} &bull; {qrisModalOrder.produk?.nama_produk} ({qrisModalOrder.jumlah} {qrisModalOrder.produk?.satuan || 'Bal'})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Keterangan E-Wallet yang Didukung */}
+                  <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 text-center">
+                    <p className="text-[10px] text-gray-500 font-semibold mb-1">
+                      Mendukung Seluruh Aplikasi Pembayaran QRIS:
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 text-[9px] font-bold text-gray-600">
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-gray-200">GoPay</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-gray-200">OVO</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-gray-200">DANA</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-gray-200">ShopeePay</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-gray-200">BCA Mobile</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-gray-200">Livin Mandiri</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-gray-200">BRImo</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2">
+                      Arahkan kamera aplikasi pembayaran Anda ke kode QRIS di atas untuk menyelesaikan transaksi.
+                    </p>
+                  </div>
+
+                  {/* Tombol Simulasi Scan & Bayar QRIS */}
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled={isProcessingQris}
+                      onClick={() => handlePayQris(qrisModalOrder)}
+                      className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                      <span>{isProcessingQris ? 'Memverifikasi Pembayaran QRIS...' : '⚡ Selesaikan Pembayaran QRIS (Simulasi Scan)'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQrisModalOrder(null)}
+                      className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-2xl transition"
+                    >
+                      Tutup & Bayar Nanti
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* TAMPILAN 2: STRUK RESMI PEMBAYARAN QRIS BERHASIL (OTOMATIS MUNCUL) */
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="text-center pb-3 border-b border-dashed border-gray-200">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 font-bold mx-auto flex items-center justify-center mb-2 shadow-inner">
+                      <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-block mb-1">
+                      TRANSAKSI QRIS BERHASIL & DITERIMA OWNER
+                    </span>
+                    <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight">STRUK PEMBAYARAN QRIS</h3>
+                    <p className="text-[11px] text-gray-500">Pabrik Kerupuk Diansyah &bull; Sumedang</p>
+                  </div>
+
+                  {/* Rincian Transaksi Struk */}
+                  <div className="space-y-2 text-xs py-2 border-b border-dashed border-gray-200 font-mono">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Ref ID QRIS:</span>
+                      <span className="font-bold text-gray-900">{qrisReceiptData.ref_id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">ID Pesanan:</span>
+                      <span className="font-bold text-gray-900">TRX-KD-{qrisReceiptData.orderId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Waktu Bayar:</span>
+                      <span className="text-gray-800 text-[11px]">{qrisReceiptData.paidAt}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Nama Pembeli:</span>
+                      <span className="font-bold text-gray-900">{qrisReceiptData.customerName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Tujuan Dana:</span>
+                      <span className="text-emerald-700 font-bold text-[11px] text-right max-w-[180px]">{qrisReceiptData.destination}</span>
+                    </div>
+                  </div>
+
+                  {/* Detail Produk */}
+                  <div className="space-y-1.5 text-xs py-2 border-b border-dashed border-gray-200">
+                    <div className="flex justify-between font-bold text-gray-900">
+                      <span>{qrisReceiptData.productName} ({qrisReceiptData.varian})</span>
+                      <span>{qrisReceiptData.qty} {qrisReceiptData.satuan}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500 text-[11px]">
+                      <span>Ukuran: {qrisReceiptData.kemasan}</span>
+                      <span>Metode: QRIS Instan (Lunas)</span>
+                    </div>
+                    <div className="flex justify-between pt-2 text-sm font-black text-brand-maroon">
+                      <span>TOTAL LUNAS:</span>
+                      <span className="font-mono text-base text-emerald-700">
+                        Rp {Number(qrisReceiptData.amount).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Keterangan Sistem */}
+                  <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-center">
+                    <p className="text-[11px] text-emerald-950 font-bold flex items-center justify-center gap-1">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      Status Pembayaran Sah: LUNAS
+                    </p>
+                    <p className="text-[10px] text-emerald-800 mt-0.5 leading-tight">
+                      Dana telah otomatis masuk ke rekening/e-wallet Owner. Anda dapat langsung menunjukkan struk ini saat mengambil kerupuk di pabrik.
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-1 print:hidden">
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="flex-1 py-3 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-md transition active:scale-95"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Cetak Struk QRIS</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQrisModalOrder(null);
+                        setQrisReceiptData(null);
+                      }}
+                      className="py-3 px-5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-2xl transition"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODAL 4: FORM UPLOAD BUKTI TRANSFER BANK OLEH PELANGGAN */}
+        {/* ========================================================================= */}
+        {uploadTransferOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative max-h-[92vh] overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => setUploadTransferOrder(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">Unggah Bukti Transfer Bank</h3>
+                  <p className="text-xs text-gray-400">Pesanan #{uploadTransferOrder.id_pesanan} &bull; Rp {Number(uploadTransferOrder.total_harga).toLocaleString('id-ID')}</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmitTransferProof} className="space-y-4">
+                {/* 1. Pilih Rekening Bank Tujuan Transfer */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Bank Tujuan yang Anda Transfer <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={transferBank}
+                    onChange={(e) => setTransferBank(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                  >
+                    <option value="Bank BCA (139-082-9912 a/n Bapak Diansyah)">Bank BCA &bull; 139-082-9912 (Bapak Diansyah)</option>
+                    <option value="Bank Mandiri (182-000-482-991 a/n Pabrik Kerupuk Diansyah)">Bank Mandiri &bull; 182-000-482-991 (Pabrik Kerupuk Diansyah)</option>
+                    <option value="Bank BRI (0123-01-089921-50-3 a/n Diansyah)">Bank BRI &bull; 0123-01-089921-50-3 (Diansyah)</option>
+                  </select>
+                </div>
+
+                {/* 2. Upload File Screenshot Bukti Transfer */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    File Screenshot Bukti Transfer <span className="text-red-500">*</span>
+                  </label>
+
+                  {!transferImage ? (
+                    <label className="border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer bg-gray-50/60 hover:bg-blue-50/30 transition">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
+                        <ImageIcon className="w-6 h-6" />
+                      </div>
+                      <span className="text-xs font-bold text-gray-700">Pilih Screenshot Bukti Transfer</span>
+                      <span className="text-[11px] text-gray-400 text-center">Format file: JPG, PNG, atau JPEG dari m-Banking / ATM</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileChange}
+                        className="hidden"
+                        required
+                      />
+                    </label>
+                  ) : (
+                    <div className="rounded-2xl border border-gray-200 p-3 bg-gray-50 space-y-2">
+                      <div className="relative rounded-xl overflow-hidden max-h-56 bg-black/5 flex items-center justify-center">
+                        <img
+                          src={transferImage}
+                          alt="Pratinjau Bukti Transfer"
+                          className="max-h-52 object-contain rounded-lg"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" />
+                          Foto Screenshot Siap Dikirim
+                        </span>
+                        <label className="text-xs text-blue-600 hover:text-blue-700 font-bold cursor-pointer underline">
+                          Ganti Foto
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Catatan Transfer (Opsional) */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Catatan / Nama Pemilik Rekening Pengirim (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={transferCatatan}
+                    onChange={(e) => setTransferCatatan(e.target.value)}
+                    placeholder="Contoh: Transfer dari Rekening a/n Hanifa"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setUploadTransferOrder(null)}
+                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUploadingTransfer || !transferImage}
+                    className="py-3 px-4 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingTransfer ? 'Mengirim...' : 'Kirim Bukti'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODAL 5: PRATINJAU BUKTI TRANSFER UNTUK PELANGGAN */}
+        {/* ========================================================================= */}
+        {previewProof && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative">
+              <button
+                type="button"
+                onClick={() => setPreviewProof(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                <ImageIcon className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-base">{previewProof.title}</h3>
+              </div>
+
+              <div className="rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center max-h-[70vh] border border-gray-200 p-2">
+                <img
+                  src={previewProof.image}
+                  alt="Bukti Transfer"
+                  className="max-h-[65vh] object-contain rounded-xl"
+                />
+              </div>
+
+              <div className="mt-4 pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setPreviewProof(null)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
+                >
+                  Tutup Pratinjau
                 </button>
               </div>
             </div>

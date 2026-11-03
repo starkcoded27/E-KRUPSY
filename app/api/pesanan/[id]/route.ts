@@ -60,7 +60,74 @@ export async function PATCH(
       });
     }
 
-    // 2. Konfirmasi Pembayaran oleh Owner (UC-12)
+    // 2. Pembayaran Instan via QRIS oleh Pelanggan
+    if (action === 'pay_qris') {
+      const qrisMeta = {
+        type: 'qris',
+        ref_id: body.ref_id || `QRIS-KD-${Date.now().toString().slice(-8)}`,
+        nmid: 'ID102034981290',
+        merchant: 'Pabrik Kerupuk Diansyah',
+        account_owner: 'Bapak Diansyah (Rekening / E-Wallet Pabrik)',
+        paid_at: new Date().toISOString(),
+        amount: body.amount || 0,
+        customer_name: body.customer_name || 'Pelanggan',
+      };
+
+      const { error: payErr } = await supabase
+        .from('pembayaran')
+        .update({
+          status_pembayaran: 'lunas',
+          tanggal_pembayaran: new Date().toISOString().split('T')[0],
+          bukti_transfer: JSON.stringify(qrisMeta),
+        })
+        .eq('id_pesanan', orderId);
+
+      if (payErr) {
+        return NextResponse.json({ message: 'Gagal memproses pelunasan QRIS: ' + payErr.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Pembayaran QRIS berhasil! Dana otomatis masuk ke Rekening / E-Wallet Owner.',
+        data: qrisMeta,
+      });
+    }
+
+    // 3. Unggah Bukti Screenshot Transfer Bank oleh Pelanggan
+    if (action === 'upload_transfer') {
+      const { bukti_transfer, bank_tujuan, catatan } = body;
+      if (!bukti_transfer) {
+        return NextResponse.json({ message: 'File bukti transfer wajib diunggah.' }, { status: 400 });
+      }
+
+      const transferMeta = typeof bukti_transfer === 'string' && bukti_transfer.startsWith('data:')
+        ? bukti_transfer
+        : JSON.stringify({
+            image: bukti_transfer,
+            bank_tujuan: bank_tujuan || 'Bank BCA (139-082-9912 a/n Bapak Diansyah)',
+            catatan: catatan || '',
+            uploaded_at: new Date().toISOString(),
+          });
+
+      const { error: payErr } = await supabase
+        .from('pembayaran')
+        .update({
+          bukti_transfer: transferMeta,
+          tanggal_pembayaran: new Date().toISOString().split('T')[0],
+        })
+        .eq('id_pesanan', orderId);
+
+      if (payErr) {
+        return NextResponse.json({ message: 'Gagal mengunggah bukti transfer: ' + payErr.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Bukti transfer berhasil dikirim ke Owner. Menunggu validasi pelunasan dari Owner.',
+      });
+    }
+
+    // 4. Konfirmasi Pembayaran oleh Owner (UC-12: Tunai maupun Transfer Bank)
     if (action === 'confirm_payment') {
       const { error: payErr } = await supabase
         .from('pembayaran')
@@ -73,7 +140,7 @@ export async function PATCH(
 
       return NextResponse.json({
         success: true,
-        message: 'Pembayaran tunai berhasil dikonfirmasi dan status berubah menjadi Lunas.',
+        message: 'Pembayaran berhasil dikonfirmasi dan status resmi menjadi Lunas.',
       });
     }
 
