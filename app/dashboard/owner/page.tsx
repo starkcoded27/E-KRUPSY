@@ -366,7 +366,7 @@ export default function OwnerDashboardPage() {
                     <th className="py-3 px-3">Produk & Varian</th>
                     <th className="py-3 px-3">Total Tagihan</th>
                     <th className="py-3 px-3">Status Produksi</th>
-                    <th className="py-3 px-3">Pembayaran</th>
+                    <th className="py-3 px-3">Status Pembayaran</th>
                     <th className="py-3 px-3 text-center print:hidden">Aksi Owner</th>
                   </tr>
                 </thead>
@@ -415,24 +415,36 @@ export default function OwnerDashboardPage() {
                           })()}
                         </td>
                         <td className="py-3 px-3">
-                          <div className="flex flex-col">
+                          <div className="flex flex-col gap-1 items-start">
                             <span className="uppercase font-bold text-[10px] text-gray-600">
                               {payInfo?.metode_pembayaran || 'Tunai'}
                             </span>
-                            <span className={`text-[10px] font-black ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              {isPaid ? '✓ LUNAS' : 'PENDING'}
-                            </span>
+                            {isPaid ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                LUNAS
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                PENDING (BELUM LUNAS)
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-3 text-center print:hidden">
                           {!isPaid ? (
-                            <button
-                              onClick={() => handleConfirmPayment(order.id_pesanan)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition active:scale-95"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              ACC Lunas
-                            </button>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <button
+                                onClick={() => handleConfirmPayment(order.id_pesanan)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition active:scale-95"
+                                title="Klik untuk mengonfirmasi bahwa kas fisik telah diterima dan mengubah status menjadi Lunas"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                ACC Lunas
+                              </button>
+                              <span className="text-[9px] text-gray-400">Klik saat kas diterima</span>
+                            </div>
                           ) : (
                             <div className="flex items-center justify-center gap-1.5">
                               <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-1 rounded-lg border border-emerald-300">
