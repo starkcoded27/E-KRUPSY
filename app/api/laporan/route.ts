@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
+import { generateChartData } from '@/lib/chart-data';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -91,6 +92,15 @@ export async function GET(req: NextRequest) {
       .select('*')
       .order('id_pelanggan', { ascending: false });
 
+    // Ambil seluruh katalog produk pabrik
+    const { data: produkList } = await supabase
+      .from('produk')
+      .select('*')
+      .order('id_produk', { ascending: true });
+
+    // Perhitungan Data Diagram Omset Keuangan (Harian, Mingguan, Bulanan, Tahunan)
+    const chartData = generateChartData(validOrders);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -104,9 +114,11 @@ export async function GET(req: NextRequest) {
         totalProses: inProgressOrders.length,
         orders,
         pelangganList: pelangganList || [],
+        produkList: produkList || [],
         rekapMetode,
         produkBreakdown,
         stockList: stockList || [],
+        chartData,
       },
     }, {
       headers: {

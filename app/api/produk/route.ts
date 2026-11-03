@@ -47,10 +47,39 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    const cleanNama = String(nama_produk).trim();
+
+    // Validasi Duplikasi Produk: Mencegah penambahan produk dengan nama yang sama (Case-Insensitive)
+    const { data: existingProducts, error: checkError } = await supabase
+      .from('produk')
+      .select('id_produk, nama_produk');
+
+    if (checkError) {
+      console.error('Error saat memeriksa duplikasi katalog produk:', checkError);
+    }
+
+    const isDuplicate = existingProducts?.some(
+      (p) => p.nama_produk && p.nama_produk.trim().toLowerCase() === cleanNama.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      return NextResponse.json(
+        {
+          success: false,
+          field: 'nama_produk',
+          message: `Produk "${cleanNama}" sudah ada di dalam katalog. Tidak dapat menambahkan produk yang sama!`,
+          errors: {
+            nama_produk: `Produk "${cleanNama}" sudah terdaftar di katalog. Tidak dapat menambahkan produk yang sama.`,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
     const { data: newProd, error } = await supabase
       .from('produk')
       .insert({
-        nama_produk: String(nama_produk).trim(),
+        nama_produk: cleanNama,
         satuan: String(satuan).trim(),
         harga: Number(harga),
         stok: Number(stok),
