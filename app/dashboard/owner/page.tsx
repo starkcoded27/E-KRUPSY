@@ -63,6 +63,17 @@ interface OrderItem {
   }[];
 }
 
+interface PelangganItem {
+  id_pelanggan: number;
+  id_user: number;
+  nama_lengkap: string;
+  alamat: string;
+  no_telp: string;
+  email: string;
+  jenis_kelamin: string;
+  created_at: string;
+}
+
 interface LaporanData {
   totalOmset: number;
   totalKasMasuk: number;
@@ -73,6 +84,7 @@ interface LaporanData {
   totalSelesai: number;
   totalProses: number;
   orders: OrderItem[];
+  pelangganList?: PelangganItem[];
   rekapMetode?: Record<string, { count: number; total: number; lunas: number }>;
   produkBreakdown?: { nama: string; satuan: string; jumlah: number; total: number }[];
   stockList?: any[];
@@ -84,6 +96,7 @@ export default function OwnerDashboardPage() {
   const [laporan, setLaporan] = useState<LaporanData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ringkasan' | 'transaksi' | 'produk'>('ringkasan');
+  const [viewSection, setViewSection] = useState<'transaksi' | 'pelanggan'>('transaksi');
 
   // 3 Kondisi Sistem (State)
   const [actionState, setActionState] = useState<{ type: StateType; message: string | null }>({
@@ -109,7 +122,7 @@ export default function OwnerDashboardPage() {
   const fetchLaporan = async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
-      const res = await fetch('/api/laporan');
+      const res = await fetch('/api/laporan', { cache: 'no-store' });
       const data = await res.json();
       if (res.ok) {
         setLaporan(data.data);
@@ -338,19 +351,110 @@ export default function OwnerDashboardPage() {
 
         {/* TABEL MANAJEMEN TRANSAKSI & KONFIRMASI PEMBAYARAN (SDD UC-12 & Bab V) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
             <div>
               <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-brand-maroon" />
-                Daftar Transaksi Pemesanan & Konfirmasi Pembayaran
+                {viewSection === 'transaksi' ? (
+                  <>
+                    <CreditCard className="w-5 h-5 text-brand-maroon" />
+                    Daftar Transaksi Pemesanan & Konfirmasi Pembayaran
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-5 h-5 text-brand-maroon" />
+                    Data Master Pelanggan Terdaftar
+                  </>
+                )}
               </h2>
               <p className="text-xs text-gray-500">
-                Owner dapat memvalidasi penerimaan kas tunai (*Cash on Delivery*) dan memantau status pesanan
+                {viewSection === 'transaksi'
+                  ? 'Owner dapat memvalidasi penerimaan kas tunai (Cash on Delivery) dan memantau status pesanan'
+                  : 'Daftar seluruh akun pelanggan yang terdaftar di basis data Pabrik Kerupuk Diansyah'}
               </p>
+            </div>
+
+            {/* Toggle Tabs Transaksi vs Pelanggan */}
+            <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setViewSection('transaksi')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  viewSection === 'transaksi'
+                    ? 'bg-white text-brand-maroon shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Transaksi ({laporan?.orders?.length || 0})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewSection('pelanggan')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  viewSection === 'pelanggan'
+                    ? 'bg-white text-brand-maroon shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Pelanggan ({laporan?.pelangganList?.length || 0})</span>
+              </button>
             </div>
           </div>
 
-          {!laporan?.orders || laporan.orders.length === 0 ? (
+          {viewSection === 'pelanggan' ? (
+            !laporan?.pelangganList || laporan.pelangganList.length === 0 ? (
+              <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100">
+                <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-gray-600">Belum ada pelanggan terdaftar di Supabase.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-gray-50 text-gray-500 font-semibold uppercase tracking-wider border-y border-gray-100">
+                    <tr>
+                      <th className="py-3 px-3">ID</th>
+                      <th className="py-3 px-3">Nama Lengkap</th>
+                      <th className="py-3 px-3">No. Telepon / WA</th>
+                      <th className="py-3 px-3">Alamat</th>
+                      <th className="py-3 px-3">Email</th>
+                      <th className="py-3 px-3">Jenis Kelamin</th>
+                      <th className="py-3 px-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {laporan.pelangganList.map((pel) => {
+                      const isNew = pel.id_pelanggan >= 7 || pel.nama_lengkap.toLowerCase().includes('hanifa');
+                      return (
+                        <tr key={pel.id_pelanggan} className="hover:bg-gray-50/70">
+                          <td className="py-3 px-3 font-mono font-bold text-gray-800">#{pel.id_pelanggan}</td>
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-gray-900 block">{pel.nama_lengkap}</span>
+                            <span className="text-[10px] text-gray-400">ID User: #{pel.id_user}</span>
+                          </td>
+                          <td className="py-3 px-3 font-mono font-medium text-gray-700">{pel.no_telp || '-'}</td>
+                          <td className="py-3 px-3 text-gray-600 max-w-xs">{pel.alamat || '-'}</td>
+                          <td className="py-3 px-3 text-gray-600">{pel.email || '-'}</td>
+                          <td className="py-3 px-3 text-gray-600">{pel.jenis_kelamin || 'Perempuan'}</td>
+                          <td className="py-3 px-3">
+                            {isNew ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                Pelanggan Baru
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                Terdaftar
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : !laporan?.orders || laporan.orders.length === 0 ? (
             <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100">
               <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-2" />
               <p className="text-xs font-bold text-gray-600">Belum ada transaksi pemesanan tercatat di Supabase.</p>

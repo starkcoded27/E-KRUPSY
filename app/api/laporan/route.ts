@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
@@ -21,6 +22,8 @@ export async function GET() {
         produksi (*, verifikasi:verifikasi_produksi (*))
       `)
       .order('id_pesanan', { ascending: false });
+
+    console.log('[API LAPORAN] Raw pesanan from DB:', pesananList?.length, 'error:', orderErr);
 
     if (orderErr) {
       return NextResponse.json({ message: 'Gagal mengambil data laporan: ' + orderErr.message }, { status: 500 });
@@ -82,6 +85,12 @@ export async function GET() {
     // Ambil rekap stok bahan baku
     const { data: stockList } = await supabase.from('stok_bahan').select('*');
 
+    // Ambil seluruh data master pelanggan terdaftar
+    const { data: pelangganList } = await supabase
+      .from('pelanggan')
+      .select('*')
+      .order('id_pelanggan', { ascending: false });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -94,9 +103,14 @@ export async function GET() {
         totalSelesai: completedOrders.length,
         totalProses: inProgressOrders.length,
         orders,
+        pelangganList: pelangganList || [],
         rekapMetode,
         produkBreakdown,
         stockList: stockList || [],
+      },
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       },
     });
   } catch (err: any) {
