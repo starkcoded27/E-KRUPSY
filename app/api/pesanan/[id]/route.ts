@@ -65,12 +65,14 @@ export async function PATCH(
       const qrisMeta = {
         type: 'qris',
         ref_id: body.ref_id || `QRIS-KD-${Date.now().toString().slice(-8)}`,
-        nmid: 'ID102034981290',
-        merchant: 'Pabrik Kerupuk Diansyah',
-        account_owner: 'Bapak Diansyah (Rekening / E-Wallet Pabrik)',
+        nmid: 'ID1025393458506',
+        merchant: 'PABRIK KERUPUK DIANSAH',
+        outlet_code: 'A01',
+        account_owner: 'Bapak Diansyah (Rekening / E-Wallet Pabrik Kerupuk Diansah)',
         paid_at: new Date().toISOString(),
         amount: body.amount || 0,
         customer_name: body.customer_name || 'Pelanggan',
+        qris_image: '/images/qris-pabrik-diansyah.jpg',
       };
 
       const { error: payErr } = await supabase

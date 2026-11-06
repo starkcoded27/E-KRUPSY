@@ -32,7 +32,9 @@ import {
   Receipt,
   Eye,
   CreditCard,
-  ArrowRight
+  ArrowRight,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 interface Produk {
@@ -375,8 +377,8 @@ export default function PelangganDashboardPage() {
         kemasan: order.ukuran_plastik,
         customerName: pelanggan?.nama_lengkap || user?.nama || 'Pelanggan',
         paidAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-        destination: 'E-Wallet / Rekening Bapak Diansyah (Pabrik Kerupuk Diansyah)',
-        nmid: 'ID102034981290',
+        destination: 'E-Wallet / Rekening Bapak Diansyah (Pabrik Kerupuk Diansah)',
+        nmid: 'ID1025393458506',
       });
 
       setActionState({
@@ -791,8 +793,8 @@ export default function PelangganDashboardPage() {
                                   kemasan: order.ukuran_plastik,
                                   customerName: pelanggan?.nama_lengkap || user?.nama || 'Pelanggan',
                                   paidAt: meta?.paid_at ? new Date(meta.paid_at).toLocaleString('id-ID') : order.tanggal_pesanan,
-                                  destination: 'E-Wallet / Rekening Bapak Diansyah (Pabrik Kerupuk Diansyah)',
-                                  nmid: 'ID102034981290',
+                                  destination: 'E-Wallet / Rekening Bapak Diansyah (Pabrik Kerupuk Diansah)',
+                                  nmid: meta?.nmid || 'ID1025393458506',
                                 });
                                 setQrisModalOrder(order);
                               }}
@@ -1240,88 +1242,63 @@ export default function PelangganDashboardPage() {
               {/* TAMPILAN 1: KODE QRIS UNTUK DI-SCAN (JIKA BELUM BAYAR) */}
               {!qrisReceiptData ? (
                 <div className="space-y-4">
-                  {/* Banner QRIS Standar Pembayaran Nasional */}
-                  <div className="rounded-2xl overflow-hidden border border-red-200 shadow-sm">
-                    <div className="bg-gradient-to-r from-red-600 to-rose-700 text-white p-3 flex items-center justify-between">
+                  {/* Banner QRIS Resmi Perusahaan */}
+                  <div className="rounded-2xl overflow-hidden border border-red-200 shadow-md">
+                    <div className="bg-gradient-to-r from-red-600 to-rose-700 text-white px-3.5 py-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="bg-white text-red-700 font-black text-xs px-2 py-0.5 rounded tracking-wider">
+                        <div className="bg-white text-red-700 font-black text-xs px-2 py-0.5 rounded tracking-wider shadow-sm">
                           QRIS
                         </div>
                         <span className="text-[10px] font-bold tracking-tight uppercase">Standar Pembayaran Nasional</span>
                       </div>
-                      <span className="text-[9px] font-mono bg-white/20 px-2 py-0.5 rounded">GPN / BI</span>
+                      <span className="text-[9px] font-mono bg-white/20 px-2 py-0.5 rounded font-bold">GPN / BI</span>
                     </div>
 
-                    <div className="p-4 text-center bg-gray-50/50">
-                      <h3 className="font-black text-gray-900 text-base uppercase tracking-tight">PABRIK KERUPUK DIANSYAH</h3>
-                      <p className="text-[10px] text-gray-500 font-mono mt-0.5">NMID: ID102034981290</p>
-                      <p className="text-[10px] text-gray-400">Penyedia: Bank Indonesia / Interkoneksi Pembayaran Digital</p>
+                    <div className="p-4 bg-gray-50/70 text-center">
+                      <div className="mb-2">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200 mb-1">
+                          QRIS RESMI PERUSAHAAN
+                        </span>
+                        <h3 className="font-black text-gray-900 text-base uppercase tracking-tight">PABRIK KERUPUK DIANSAH</h3>
+                        <p className="text-[10px] text-gray-600 font-mono font-bold mt-0.5">
+                          NMID : ID1025393458506 &bull; A01
+                        </p>
+                      </div>
 
-                      {/* Visual QR Code Bersih & Realistis */}
-                      <div className="my-3">
-                        <svg className="w-52 h-52 mx-auto bg-white p-2.5 rounded-2xl shadow-inner border border-gray-200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect width="200" height="200" fill="white"/>
-                          {/* Corner Markers */}
-                          <rect x="15" y="15" width="45" height="45" fill="#111827" rx="6"/>
-                          <rect x="23" y="23" width="29" height="29" fill="white" rx="3"/>
-                          <rect x="30" y="30" width="15" height="15" fill="#111827" rx="2"/>
-
-                          <rect x="140" y="15" width="45" height="45" fill="#111827" rx="6"/>
-                          <rect x="148" y="23" width="29" height="29" fill="white" rx="3"/>
-                          <rect x="155" y="30" width="15" height="15" fill="#111827" rx="2"/>
-
-                          <rect x="15" y="140" width="45" height="45" fill="#111827" rx="6"/>
-                          <rect x="23" y="148" width="29" height="29" fill="white" rx="3"/>
-                          <rect x="30" y="155" width="15" height="15" fill="#111827" rx="2"/>
-
-                          {/* Data Pattern Modules */}
-                          <rect x="70" y="20" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="92" y="20" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="114" y="20" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="80" y="36" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="102" y="36" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="124" y="36" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="70" y="52" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="92" y="52" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="114" y="52" width="12" height="12" fill="#111827" rx="1"/>
-
-                          <rect x="20" y="70" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="38" y="80" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="52" y="70" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="20" y="92" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="38" y="104" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="52" y="116" width="12" height="12" fill="#111827" rx="1"/>
-
-                          {/* Center Emblem */}
-                          <rect x="68" y="68" width="64" height="64" fill="#991b1b" rx="12"/>
-                          <rect x="72" y="72" width="56" height="56" fill="white" rx="8"/>
-                          <text x="100" y="97" textAnchor="middle" fill="#991b1b" fontSize="13" fontWeight="900" fontFamily="sans-serif">QRIS</text>
-                          <text x="100" y="111" textAnchor="middle" fill="#1f2937" fontSize="7" fontWeight="bold" fontFamily="sans-serif">DIANSYAH</text>
-
-                          {/* Right & Bottom Modules */}
-                          <rect x="140" y="70" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="162" y="82" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="176" y="70" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="140" y="98" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="162" y="110" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="176" y="122" width="12" height="12" fill="#111827" rx="1"/>
-
-                          <rect x="70" y="140" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="92" y="152" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="114" y="140" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="80" y="168" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="102" y="178" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="124" y="168" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="140" y="140" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="162" y="152" width="12" height="12" fill="#111827" rx="1"/>
-                          <rect x="176" y="168" width="12" height="12" fill="#111827" rx="1"/>
-                        </svg>
+                      {/* Poster QRIS Resmi Asli Perusahaan */}
+                      <div className="relative my-2.5 rounded-2xl overflow-hidden border-2 border-red-100 shadow-md bg-white group">
+                        <img
+                          src="/images/qris-pabrik-diansyah.jpg"
+                          alt="QRIS Resmi Pabrik Kerupuk Diansah"
+                          className="w-full max-h-[380px] object-contain mx-auto bg-white transition duration-300 group-hover:scale-[1.02]"
+                        />
+                        <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+                          <a
+                            href="/images/qris-pabrik-diansyah.jpg"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 bg-black/75 hover:bg-black text-white text-[10px] font-bold rounded-lg backdrop-blur-sm transition flex items-center gap-1 shadow-md"
+                            title="Buka gambar penuh"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>Buka Penuh</span>
+                          </a>
+                          <a
+                            href="/images/qris-pabrik-diansyah.jpg"
+                            download="QRIS-Pabrik-Kerupuk-Diansah.jpg"
+                            className="px-2.5 py-1 bg-brand-maroon/90 hover:bg-brand-maroon text-white text-[10px] font-bold rounded-lg backdrop-blur-sm transition flex items-center gap-1 shadow-md"
+                            title="Unduh QRIS untuk di-scan dari galeri HP"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>Unduh QRIS</span>
+                          </a>
+                        </div>
                       </div>
 
                       {/* Box Nominal Pembayaran */}
-                      <div className="bg-amber-100/70 border border-amber-300 rounded-2xl p-2.5">
+                      <div className="bg-amber-100/80 border border-amber-300 rounded-2xl p-3 shadow-inner">
                         <span className="text-[11px] font-bold text-amber-900 block">TOTAL TAGIHAN PEMBAYARAN:</span>
-                        <span className="text-xl font-black text-brand-maroon font-mono">
+                        <span className="text-2xl font-black text-brand-maroon font-mono">
                           Rp {Number(qrisModalOrder.total_harga).toLocaleString('id-ID')}
                         </span>
                         <span className="text-[10px] text-amber-800 block mt-0.5">
