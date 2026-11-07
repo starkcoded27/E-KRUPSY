@@ -332,7 +332,7 @@ export default function OwnerDashboardPage() {
 
   return (
     <RoleGuard allowedRoles={['owner']} pageTitle="Dashboard Owner">
-      <div className="space-y-6">
+      <div className={`space-y-6 ${(selectedOrderToPrint || showFinancialReportModal) ? 'print:hidden' : ''}`}>
         {/* Banner Eksekutif Owner */}
         <div className="bg-gradient-to-r from-amber-800 via-brand-maroon to-brand-darkmaroon text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-3xl">
@@ -1794,97 +1794,6 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
         )}
-        {/* MODAL CETAK RESI RESMI OLEH OWNER UNTUK DIKASIH KE PELANGGAN (UC-13) */}
-        {selectedOrderToPrint && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative print:p-0 print:border-none print:shadow-none">
-              <button
-                onClick={() => setSelectedOrderToPrint(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition print:hidden"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Header Resi Pabrik */}
-              <div className="text-center pb-4 border-b border-dashed border-gray-300">
-                <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-xl mx-auto flex items-center justify-center mb-2 shadow">
-                  KD
-                </div>
-                <h3 className="font-black text-gray-900 text-lg uppercase tracking-wide">Pabrik Kerupuk Diansyah</h3>
-                <p className="text-[11px] text-gray-500">Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang</p>
-                <div className="mt-2 inline-block px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  RESI RESMI PEMBAYARAN SAH
-                </div>
-              </div>
-
-              {/* Rincian Transaksi */}
-              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Nomor Transaksi:</span>
-                  <span className="font-mono font-bold text-gray-800">TRX-KD-{selectedOrderToPrint.id_pesanan}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Tanggal:</span>
-                  <span className="font-medium text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Nama Pelanggan:</span>
-                  <span className="font-bold text-gray-800">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">No. Telepon:</span>
-                  <span className="font-medium text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</span>
-                </div>
-              </div>
-
-              {/* Rincian Produk */}
-              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
-                <div className="flex justify-between font-bold text-gray-900">
-                  <span>{selectedOrderToPrint.produk?.nama_produk} ({selectedOrderToPrint.varian_rasa})</span>
-                  <span>{selectedOrderToPrint.jumlah} {selectedOrderToPrint.produk?.satuan}</span>
-                </div>
-                <div className="flex justify-between text-gray-500 text-[11px]">
-                  <span>Ukuran Kemasan: {selectedOrderToPrint.ukuran_plastik}</span>
-                  <span>Metode: <strong className="uppercase">{selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}</strong></span>
-                </div>
-                <div className="flex justify-between pt-2 text-sm font-black text-brand-maroon">
-                  <span>TOTAL PEMBAYARAN:</span>
-                  <span>Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-
-              {/* Status Lunas & Tanda Terima */}
-              <div className="py-3 text-center">
-                <p className="text-[11px] text-gray-600 font-bold">
-                  Status: <span className="text-emerald-600">✓ LUNAS (Kas Telah Diterima Owner)</span>
-                </p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Resi cetak ini resmi diserahkan kepada pelanggan sebagai bukti transaksi sah Pabrik Kerupuk Diansyah.
-                </p>
-              </div>
-
-              {/* Tombol Cetak Khusus Owner */}
-              <div className="mt-4 flex gap-2 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="flex-1 py-2.5 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition active:scale-95"
-                >
-                  <Printer className="w-4 h-4" />
-                  Cetak Resi Fisik (Print)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedOrderToPrint(null)}
-                  className="py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* MODAL VERIFIKASI BUKTI TRANSFER BANK PELANGGAN OLEH OWNER */}
         {selectedTransferProof && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
@@ -2067,12 +1976,105 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
         )}
-        {/* ========================================================================= */}
+      </div>
+
+        {/* MODAL CETAK RESI RESMI OLEH OWNER UNTUK DIKASIH KE PELANGGAN (UC-13) */}
+        {selectedOrderToPrint && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:static print:inset-auto print:p-0 print:bg-transparent print:block print:z-auto print:m-0">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative print:p-6 print:border print:border-gray-400 print:shadow-none print:max-w-md print:mx-auto print:rounded-2xl print:break-inside-avoid print:page-break-inside-avoid">
+              <button
+                onClick={() => setSelectedOrderToPrint(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition print:hidden"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Header Resi Pabrik */}
+              <div className="text-center pb-4 border-b border-dashed border-gray-300">
+                <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-xl mx-auto flex items-center justify-center mb-2 shadow print:shadow-none">
+                  KD
+                </div>
+                <h3 className="font-black text-gray-900 text-lg uppercase tracking-wide">Pabrik Kerupuk Diansyah</h3>
+                <p className="text-[11px] text-gray-500">Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang</p>
+                <div className="mt-2 inline-block px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  RESI RESMI PEMBAYARAN SAH
+                </div>
+              </div>
+
+              {/* Rincian Transaksi */}
+              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Nomor Transaksi:</span>
+                  <span className="font-mono font-bold text-gray-800">TRX-KD-{selectedOrderToPrint.id_pesanan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Tanggal:</span>
+                  <span className="font-medium text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Nama Pelanggan:</span>
+                  <span className="font-bold text-gray-800">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">No. Telepon:</span>
+                  <span className="font-medium text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</span>
+                </div>
+              </div>
+
+              {/* Rincian Produk */}
+              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>{selectedOrderToPrint.produk?.nama_produk} ({selectedOrderToPrint.varian_rasa})</span>
+                  <span>{selectedOrderToPrint.jumlah} {selectedOrderToPrint.produk?.satuan}</span>
+                </div>
+                <div className="flex justify-between text-gray-500 text-[11px]">
+                  <span>Ukuran Kemasan: {selectedOrderToPrint.ukuran_plastik}</span>
+                  <span>Metode: <strong className="uppercase">{selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}</strong></span>
+                </div>
+                <div className="flex justify-between pt-2 text-sm font-black text-brand-maroon">
+                  <span>TOTAL PEMBAYARAN:</span>
+                  <span>Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+
+              {/* Status Lunas & Tanda Terima */}
+              <div className="py-3 text-center">
+                <p className="text-[11px] text-gray-600 font-bold">
+                  Status: <span className="text-emerald-600">✓ LUNAS (Kas Telah Diterima Owner)</span>
+                </p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Resi cetak ini resmi diserahkan kepada pelanggan sebagai bukti transaksi sah Pabrik Kerupuk Diansyah.
+                </p>
+              </div>
+
+              {/* Tombol Cetak Khusus Owner */}
+              <div className="mt-4 flex gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex-1 py-2.5 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition active:scale-95"
+                >
+                  <Printer className="w-4 h-4" />
+                  Cetak Resi Fisik (Print)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderToPrint(null)}
+                  className="py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+{/* ========================================================================= */}
         {/* MODAL CETAK DOKUMEN RESMI LAPORAN KEUANGAN PABRIK (PRINTABLE FORM) */}
         {/* ========================================================================= */}
         {showFinancialReportModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-gray-100 max-h-[92vh] overflow-y-auto relative print:p-0 print:border-none print:shadow-none print:max-w-full">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:static print:inset-auto print:p-0 print:bg-transparent print:block print:z-auto print:m-0">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-gray-100 max-h-[92vh] overflow-y-auto relative print:p-6 print:border print:border-gray-400 print:shadow-none print:max-w-full print:max-h-none print:overflow-visible print:rounded-2xl print:break-inside-avoid print:page-break-inside-avoid">
               <button
                 onClick={() => setShowFinancialReportModal(false)}
                 className="absolute top-5 right-5 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition print:hidden"
@@ -2212,89 +2214,6 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
         )}
-
-        {/* MODAL VERIFIKASI BUKTI TRANSFER BANK PELANGGAN OLEH OWNER */}
-        {selectedTransferProof && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative max-h-[92vh] overflow-y-auto">
-              <button
-                type="button"
-                onClick={() => setSelectedTransferProof(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 mb-4">
-                <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                  <ImageIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Verifikasi Bukti Transfer Bank</h3>
-                  <p className="text-xs text-gray-400">
-                    Pesanan #{selectedTransferProof.id_pesanan} &bull; {selectedTransferProof.pelanggan?.nama_lengkap || 'Pelanggan'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Rincian Transaksi */}
-              <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 text-xs mb-4">
-                <div>
-                  <span className="text-gray-400 block text-[10px]">TOTAL YANG HARUS DITRANSFER:</span>
-                  <span className="font-mono font-black text-brand-maroon text-sm">
-                    Rp {Number(selectedTransferProof.total_harga).toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-gray-400 block text-[10px]">STATUS SAAT INI:</span>
-                  <span className={`font-bold ${selectedTransferProof.pembayaran?.[0]?.status_pembayaran === 'lunas' ? 'text-emerald-600' : 'text-blue-600'}`}>
-                    {selectedTransferProof.pembayaran?.[0]?.status_pembayaran === 'lunas' ? '✓ LUNAS' : 'MENUNGGU ACC'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Gambar Bukti Screenshot Transfer */}
-              <div className="rounded-2xl border border-gray-200 bg-gray-100 p-2 overflow-hidden flex items-center justify-center max-h-[55vh]">
-                {selectedTransferProof.pembayaran?.[0]?.bukti_transfer ? (
-                  <img
-                    src={selectedTransferProof.pembayaran[0].bukti_transfer}
-                    alt="Screenshot Bukti Transfer Pelanggan"
-                    className="max-h-[50vh] object-contain rounded-xl shadow-sm"
-                  />
-                ) : (
-                  <div className="p-8 text-center text-gray-400 text-xs">
-                    Pelanggan belum mengunggah gambar bukti transfer.
-                  </div>
-                )}
-              </div>
-
-              {/* Tombol Aksi Owner */}
-              <div className="mt-5 flex gap-2 pt-2 border-t border-gray-100">
-                {selectedTransferProof.pembayaran?.[0]?.status_pembayaran !== 'lunas' && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await handleConfirmPayment(selectedTransferProof.id_pesanan);
-                      setSelectedTransferProof(null);
-                    }}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition active:scale-95"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>✓ ACC Lunas (Bukti Transfer Sah)</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setSelectedTransferProof(null)}
-                  className="py-3 px-5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </RoleGuard>
   );
 }
