@@ -109,7 +109,7 @@ export async function PATCH(
         ? bukti_transfer
         : JSON.stringify({
             image: bukti_transfer,
-            bank_tujuan: bank_tujuan || 'Bank BCA (139-082-9912 a/n Bapak Diansyah)',
+            bank_tujuan: bank_tujuan || 'Bank BCA (7405136830 a/n Pabrik Kerupuk Diansyah)',
             catatan: catatan || '',
             uploaded_at: new Date().toISOString(),
           });
