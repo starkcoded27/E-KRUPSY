@@ -340,8 +340,8 @@ export default function StaffPembungkusDashboardPage() {
                         </span>
                       </div>
 
-                      <h3 className="font-black text-gray-900 text-xl sm:text-2xl" style={{ fontSize: "22px" }}>{item.produk?.nama_produk}</h3>
-                      <div className="text-gray-700 mt-2 flex flex-wrap gap-x-5 gap-y-1.5 font-medium" style={{ fontSize: "16px" }}>
+                      <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.produk?.nama_produk}</h3>
+                      <div className="text-gray-600 mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-xs sm:text-sm">
                         <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
                         <span>Varian: <strong className="text-gray-800">{item.pesanan?.varian_rasa}</strong></span>
                         <span>Kemasan: <strong className="text-blue-700 font-bold">{item.pesanan?.ukuran_plastik}</strong></span>
