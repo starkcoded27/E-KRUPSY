@@ -426,7 +426,7 @@ export default function PelangganDashboardPage() {
     // 1. Dibatalkan
     if (order.status_pesanan === 'dibatalkan') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-gray-100 text-gray-700 border border-gray-300">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-300">
           <X className="w-3.5 h-3.5 text-gray-500" />
           Dibatalkan
         </span>
@@ -440,7 +440,7 @@ export default function PelangganDashboardPage() {
     // 2. Siap Diambil / Selesai
     if (order.status_pesanan === 'selesai' || prod?.status_produksi === 'selesai') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
           4. Siap Diambil / Selesai
         </span>
@@ -452,7 +452,7 @@ export default function PelangganDashboardPage() {
     // 3. Sedang Dibungkus / Dikemas (Setelah Lolos QC)
     if (isPacking) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-blue-100 text-blue-800 border border-blue-300 animate-pulse">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-300 animate-pulse">
           <Package className="w-3.5 h-3.5 text-blue-600" />
           3. Sedang Dibungkus / Dikemas
         </span>
@@ -462,7 +462,7 @@ export default function PelangganDashboardPage() {
     // 4. Selesai Goreng (Menunggu QC Pembungkus)
     if (prod?.status_produksi === 'siap_diverifikasi') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-indigo-100 text-indigo-800 border border-indigo-300">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-300">
           <Clock className="w-3.5 h-3.5 text-indigo-600" />
           2b. Selesai Goreng (Menunggu QC)
         </span>
@@ -676,8 +676,8 @@ export default function PelangganDashboardPage() {
 
                       <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                          <h4 className="font-bold text-gray-900 text-base">{order.produk?.nama_produk}</h4>
-                          <div className="text-sm text-gray-600 space-y-1 mt-1 font-normal">
+                          <h4 className="font-bold text-gray-900 text-lg sm:text-xl">{order.produk?.nama_produk}</h4>
+                          <div className="text-sm sm:text-base text-gray-700 space-y-1.5 mt-1.5 font-normal">
                             <p>Jumlah: <strong className="font-semibold text-gray-900">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong></p>
                             <p>Varian: <strong className="font-semibold text-gray-900">{order.varian_rasa}</strong> &bull; Kemasan: <strong className="font-semibold text-gray-900">{order.ukuran_plastik}</strong></p>
                             <p>Metode Pembayaran: <strong className="uppercase font-semibold text-gray-900">{payInfo?.metode_pembayaran || 'Tunai'}</strong></p>
@@ -685,8 +685,8 @@ export default function PelangganDashboardPage() {
                         </div>
 
                         <div className="text-left sm:text-right">
-                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Total Tagihan:</span>
-                          <span className="text-base font-bold text-brand-maroon block">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Total Tagihan:</span>
+                          <span className="text-xl sm:text-2xl font-black text-brand-maroon block">
                             Rp {Number(order.total_harga).toLocaleString('id-ID')}
                           </span>
                         </div>
