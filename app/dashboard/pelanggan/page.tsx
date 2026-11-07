@@ -481,7 +481,7 @@ export default function PelangganDashboardPage() {
 
     // 6. Menunggu Diproses
     return (
-      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-base font-extrabold bg-amber-100 text-amber-950 border-2 border-amber-400 px-4 py-2 rounded-xl">
+      <span className="inline-flex items-center gap-2 rounded-full font-black bg-amber-100 text-amber-950 border-2 border-amber-400 shadow-sm" style={{ fontSize: "16px", padding: "6px 18px" }}>
         <Clock className="w-3.5 h-3.5 text-amber-600" />
         1. Menunggu Diproses
       </span>
@@ -664,10 +664,10 @@ export default function PelangganDashboardPage() {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-sm bg-gray-100 text-gray-800 px-3 py-1.5 rounded-xl border border-gray-200">
+                          <span className="font-mono font-black bg-gray-100 text-gray-900 px-4 py-2 rounded-xl border-2 border-gray-300 shadow-sm" style={{ fontSize: "16px" }}>
                             ID: #{order.id_pesanan}
                           </span>
-                          <span className="text-sm font-medium text-gray-500">
+                          <span className="font-bold text-gray-600" style={{ fontSize: "16px" }}>
                             {order.tanggal_pesanan}
                           </span>
                         </div>
@@ -676,8 +676,8 @@ export default function PelangganDashboardPage() {
 
                       <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                          <h4 className="font-black text-gray-900 text-2xl sm:text-3xl font-black">{order.produk?.nama_produk}</h4>
-                          <div className="text-base sm:text-lg text-gray-700 space-y-2 mt-2.5 font-medium">
+                          <h4 className="font-black text-gray-900 tracking-tight" style={{ fontSize: "28px", lineHeight: "1.2" }}>{order.produk?.nama_produk}</h4>
+                          <div className="text-gray-800 space-y-2 mt-3 font-semibold" style={{ fontSize: "18px", lineHeight: "1.6" }}>
                             <p>Jumlah: <strong className="text-gray-800">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong></p>
                             <p>Varian: <strong className="text-gray-800">{order.varian_rasa}</strong> &bull; Kemasan: <strong className="text-gray-800">{order.ukuran_plastik}</strong></p>
                             <p>Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong></p>
@@ -685,8 +685,8 @@ export default function PelangganDashboardPage() {
                         </div>
 
                         <div className="text-right">
-                          <span className="text-sm font-bold text-gray-500 block">Total Tagihan:</span>
-                          <span className="text-3xl sm:text-4xl font-black text-brand-maroon">
+                          <span className="text-gray-500 font-bold block uppercase tracking-wider" style={{ fontSize: "16px", marginBottom: "4px" }}>Total Tagihan:</span>
+                          <span className="font-black text-brand-maroon block" style={{ fontSize: "40px", lineHeight: "1" }}>
                             Rp {Number(order.total_harga).toLocaleString('id-ID')}
                           </span>
                         </div>
@@ -720,7 +720,7 @@ export default function PelangganDashboardPage() {
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-black uppercase tracking-wide text-gray-900">
+                              <span className="font-black uppercase tracking-wide text-gray-900" style={{ fontSize: "17px" }}>
                                 Metode: {payInfo?.metode_pembayaran || 'Tunai'}
                               </span>
                               {isPaid ? (
@@ -732,13 +732,13 @@ export default function PelangganDashboardPage() {
                                   ✓ BUKTI TERKIRIM (MENUNGGU ACC OWNER)
                                 </span>
                               ) : (
-                                <span className="text-xs font-bold px-3 py-1 bg-amber-200 text-amber-950 rounded-full">
+                                <span className="font-extrabold bg-amber-200 text-amber-950 rounded-full border border-amber-300" style={{ fontSize: "14px", padding: "4px 12px" }}>
                                   BELUM LUNAS (MENUNGGU PEMBAYARAN)
                                 </span>
                               )}
                             </div>
 
-                            <span className="text-sm sm:text-base mt-2 block leading-relaxed text-gray-800 font-medium">
+                            <span className="mt-2.5 block text-gray-800 font-semibold" style={{ fontSize: "17px", lineHeight: "1.6" }}>
                               {isPaid ? (
                                 payInfo?.metode_pembayaran === 'qris'
                                   ? 'Pembayaran QRIS telah diverifikasi secara otomatis & dana telah masuk ke e-wallet owner.'
@@ -851,7 +851,7 @@ export default function PelangganDashboardPage() {
                         {order.status_pesanan === 'menunggu_diproses' && !isPaid && (
                           <button
                             onClick={() => handleCancelOrder(order.id_pesanan)}
-                            className="inline-flex items-center gap-2 text-sm text-red-600 hover:bg-red-50 font-bold px-4 py-2.5 rounded-xl border border-red-200 transition shadow-sm"
+                            className="inline-flex items-center gap-2 text-red-600 hover:bg-red-50 font-black rounded-xl border-2 border-red-300 transition shadow-sm" style={{ fontSize: "16px", padding: "10px 22px" }}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Batalkan Pesanan
