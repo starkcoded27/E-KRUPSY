@@ -426,7 +426,7 @@ export default function PelangganDashboardPage() {
     // 1. Dibatalkan
     if (order.status_pesanan === 'dibatalkan') {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-300">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-700 border border-gray-300 px-3.5 py-1.5">
           <X className="w-3.5 h-3.5 text-gray-500" />
           Dibatalkan
         </span>
@@ -440,7 +440,7 @@ export default function PelangganDashboardPage() {
     // 2. Siap Diambil / Selesai
     if (order.status_pesanan === 'selesai' || prod?.status_produksi === 'selesai') {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-900 border border-emerald-300">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 px-3.5 py-1.5">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
           4. Siap Diambil / Selesai
         </span>
@@ -452,7 +452,7 @@ export default function PelangganDashboardPage() {
     // 3. Sedang Dibungkus / Dikemas (Setelah Lolos QC)
     if (isPacking) {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900 border border-blue-300 animate-pulse">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-900 border border-blue-300 px-3.5 py-1.5 animate-pulse">
           <Package className="w-3.5 h-3.5 text-blue-600" />
           3. Sedang Dibungkus / Dikemas
         </span>
@@ -472,7 +472,7 @@ export default function PelangganDashboardPage() {
     // 5. Dalam Penggorengan
     if (order.status_pesanan === 'diproses' || prod?.status_produksi === 'diproses') {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-900 border border-orange-300 animate-pulse">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-900 border border-orange-300 px-3.5 py-1.5 animate-pulse">
           <Flame className="w-3.5 h-3.5 text-orange-600" />
           2. Dalam Penggorengan / Produksi
         </span>
@@ -481,7 +481,7 @@ export default function PelangganDashboardPage() {
 
     // 6. Menunggu Diproses
     return (
-      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-900 border border-amber-300 px-3.5 py-1.5">
         <Clock className="w-3.5 h-3.5 text-amber-600" />
         1. Menunggu Diproses
       </span>
@@ -522,8 +522,8 @@ export default function PelangganDashboardPage() {
         {/* Customer Address Info Card */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Identitas Pemesan</h3>
-            <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-800">
+            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-1.5">Identitas Pemesan</h3>
+            <div className="flex flex-wrap items-center gap-5 text-sm sm:text-base font-semibold text-gray-800">
               <span className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-brand-maroon" />
                 {pelanggan?.alamat || 'Alamat belum diatur'}
@@ -664,10 +664,10 @@ export default function PelangganDashboardPage() {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg">
+                          <span className="font-mono font-bold text-sm bg-gray-100 text-gray-800 px-3 py-1.5 rounded-xl border border-gray-200">
                             ID: #{order.id_pesanan}
                           </span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-sm font-medium text-gray-500">
                             {order.tanggal_pesanan}
                           </span>
                         </div>
@@ -676,8 +676,8 @@ export default function PelangganDashboardPage() {
 
                       <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                          <h4 className="font-bold text-gray-900 text-base">{order.produk?.nama_produk}</h4>
-                          <div className="text-xs text-gray-500 space-y-0.5 mt-1">
+                          <h4 className="font-black text-gray-900 text-xl sm:text-2xl">{order.produk?.nama_produk}</h4>
+                          <div className="text-sm sm:text-base text-gray-600 space-y-1.5 mt-2 font-medium">
                             <p>Jumlah: <strong className="text-gray-800">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong></p>
                             <p>Varian: <strong className="text-gray-800">{order.varian_rasa}</strong> &bull; Kemasan: <strong className="text-gray-800">{order.ukuran_plastik}</strong></p>
                             <p>Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong></p>
@@ -685,8 +685,8 @@ export default function PelangganDashboardPage() {
                         </div>
 
                         <div className="text-right">
-                          <span className="text-xs text-gray-400 block">Total Tagihan:</span>
-                          <span className="text-xl font-black text-brand-maroon">
+                          <span className="text-sm font-bold text-gray-500 block">Total Tagihan:</span>
+                          <span className="text-2xl sm:text-3xl font-black text-brand-maroon">
                             Rp {Number(order.total_harga).toLocaleString('id-ID')}
                           </span>
                         </div>
@@ -720,25 +720,25 @@ export default function PelangganDashboardPage() {
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-xs font-black uppercase tracking-wide text-gray-900">
+                              <span className="text-sm font-black uppercase tracking-wide text-gray-900">
                                 Metode: {payInfo?.metode_pembayaran || 'Tunai'}
                               </span>
                               {isPaid ? (
-                                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-200 text-emerald-950 rounded-full">
+                                <span className="text-xs font-bold px-3 py-1 bg-emerald-200 text-emerald-950 rounded-full">
                                   ✓ SUDAH LUNAS {payInfo?.metode_pembayaran === 'qris' ? '(QRIS OTOMATIS)' : '(DI-ACC OWNER)'}
                                 </span>
                               ) : payInfo?.metode_pembayaran === 'transfer' && payInfo?.bukti_transfer ? (
-                                <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-200 text-blue-950 rounded-full">
+                                <span className="text-xs font-bold px-3 py-1 bg-blue-200 text-blue-950 rounded-full">
                                   ✓ BUKTI TERKIRIM (MENUNGGU ACC OWNER)
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-200 text-amber-950 rounded-full">
+                                <span className="text-xs font-bold px-3 py-1 bg-amber-200 text-amber-950 rounded-full">
                                   BELUM LUNAS (MENUNGGU PEMBAYARAN)
                                 </span>
                               )}
                             </div>
 
-                            <span className="text-[11px] mt-1 block leading-tight text-gray-600">
+                            <span className="text-xs sm:text-sm mt-1.5 block leading-normal text-gray-700 font-medium">
                               {isPaid ? (
                                 payInfo?.metode_pembayaran === 'qris'
                                   ? 'Pembayaran QRIS telah diverifikasi secara otomatis & dana telah masuk ke e-wallet owner.'
@@ -851,7 +851,7 @@ export default function PelangganDashboardPage() {
                         {order.status_pesanan === 'menunggu_diproses' && !isPaid && (
                           <button
                             onClick={() => handleCancelOrder(order.id_pesanan)}
-                            className="inline-flex items-center gap-1.5 text-xs text-red-600 hover:bg-red-50 font-bold px-3 py-2 rounded-xl border border-red-200 transition"
+                            className="inline-flex items-center gap-2 text-sm text-red-600 hover:bg-red-50 font-bold px-4 py-2.5 rounded-xl border border-red-200 transition shadow-sm"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Batalkan Pesanan
