@@ -304,8 +304,8 @@ export default function StaffPenggorengDashboardPage() {
                         </span>
                       </div>
 
-                      <h3 className="font-bold text-gray-900 text-base">{item.produk?.nama_produk}</h3>
-                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                      <h3 className="font-black text-gray-900 text-xl sm:text-2xl" style={{ fontSize: "22px" }}>{item.produk?.nama_produk}</h3>
+                      <div className="text-gray-700 mt-2 flex flex-wrap gap-x-5 gap-y-1.5 font-medium" style={{ fontSize: "16px" }}>
                         <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
                         <span>Varian Rasa: <strong className="text-orange-700">{item.pesanan?.varian_rasa}</strong></span>
                         <span>Pelanggan: <strong className="text-gray-800">{item.pesanan?.pelanggan?.nama_lengkap || '-'}</strong></span>
