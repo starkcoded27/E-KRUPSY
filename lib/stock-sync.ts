@@ -176,3 +176,60 @@ export async function reduceProductCatalogFromRawMaterial(
   }
 }
 
+/**
+ * Konversi ukuran plastik ke nama bahan di stok_bahan
+ * Contoh: "1/2 kg" -> "Plastik Ukuran 1/2 kg"
+ *         "30x45 kg" -> "Plastik Ukuran 30x45 kg"
+ */
+export function ukuranToPlastikBahanName(ukuran: string): string {
+  const clean = String(ukuran || '').trim();
+  if (!clean) return '';
+  if (clean.toLowerCase().startsWith('plastik ukuran ')) return clean;
+  return `Plastik Ukuran ${clean}`;
+}
+
+/**
+ * Konversi nama bahan plastik ke label ukuran
+ * Contoh: "Plastik Ukuran 1/2 kg" -> "1/2 kg"
+ */
+export function plastikBahanNameToUkuran(namaBahan: string): string {
+  const clean = String(namaBahan || '').trim();
+  if (clean.toLowerCase().startsWith('plastik ukuran ')) {
+    return clean.slice(15).trim();
+  }
+  return clean;
+}
+
+/**
+ * Potong stok plastik kemasan di gudang pembungkusan saat pesanan selesai dibungkus
+ */
+export async function deductPlasticOnPackingFinish(
+  supabase: SupabaseClient,
+  ukuranPlastik: string,
+  packAmount: number = 1
+) {
+  try {
+    const bahanName = ukuranToPlastikBahanName(ukuranPlastik);
+    const { data: plasticItem } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah, satuan')
+      .ilike('nama_bahan', bahanName)
+      .maybeSingle();
+
+    if (plasticItem) {
+      const newJumlah = Math.max(0, (plasticItem.jumlah || 0) - packAmount);
+      await supabase
+        .from('stok_bahan')
+        .update({
+          jumlah: newJumlah,
+          tanggal_update: new Date().toISOString().split('T')[0],
+        })
+        .eq('id_stok', plasticItem.id_stok);
+      console.log(`[PLASTIK SYNC] Potong ${packAmount} ${plasticItem.satuan} ${bahanName}. Sisa stok: ${newJumlah} ${plasticItem.satuan}.`);
+    }
+  } catch (err) {
+    console.error('[PLASTIK SYNC ERROR] Gagal potong stok plastik:', err);
+  }
+}
+
+

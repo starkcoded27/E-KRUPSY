@@ -341,10 +341,30 @@ export default function StaffPembungkusDashboardPage() {
                       </div>
 
                       <h3 className="font-bold text-gray-900 text-base">{item.produk?.nama_produk}</h3>
-                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5">
                         <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
                         <span>Varian: <strong className="text-gray-800">{item.pesanan?.varian_rasa}</strong></span>
-                        <span>Kemasan: <strong className="text-blue-700 font-bold">{item.pesanan?.ukuran_plastik}</strong></span>
+                        <span className="flex items-center gap-1.5">
+                          Kemasan: <strong className="text-blue-700 font-bold">{item.pesanan?.ukuran_plastik}</strong>
+                          {(() => {
+                            const reqUkuran = String(item.pesanan?.ukuran_plastik || '').toLowerCase();
+                            const matchingPlastic = stockList.find(
+                              (s) => s.kategori === 'Plastik' && s.nama_bahan.toLowerCase().includes(reqUkuran)
+                            );
+                            if (!matchingPlastic || (matchingPlastic.jumlah || 0) <= 0) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full animate-pulse">
+                                  ⚠ Stok Plastik Kosong di Gudang!
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                ✓ Plastik Ready ({matchingPlastic.jumlah} {matchingPlastic.satuan})
+                              </span>
+                            );
+                          })()}
+                        </span>
                         <span>Pelanggan: <strong className="text-gray-800">{item.pesanan?.pelanggan?.nama_lengkap || '-'}</strong></span>
                       </div>
 
@@ -438,8 +458,14 @@ export default function StaffPembungkusDashboardPage() {
                     </span>
                     <span className="text-[10px] text-gray-400">Update: {stok.tanggal_update}</span>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                    Tersedia
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    stok.jumlah <= 0
+                      ? 'bg-red-100 text-red-700 border border-red-200'
+                      : stok.jumlah < 10
+                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                      : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                  }`}>
+                    {stok.jumlah <= 0 ? 'Habis' : stok.jumlah < 10 ? 'Menipis' : 'Tersedia'}
                   </span>
                 </div>
               ))}

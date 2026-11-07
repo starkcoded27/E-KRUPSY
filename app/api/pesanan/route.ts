@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
-import { deductRawMaterialOnOrder } from '@/lib/stock-sync';
+import { deductRawMaterialOnOrder, ukuranToPlastikBahanName } from '@/lib/stock-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,11 +108,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Produk yang dipilih tidak ditemukan di database.' }, { status: 404 });
     }
 
-    // Domain Check: Cek ketersediaan stok
+    // Domain Check: Cek ketersediaan stok produk
     const qty = Number(jumlah);
     if (prodData.stok < qty) {
       return NextResponse.json({
         message: `Stok produk ${prodData.nama_produk} tidak mencukupi. Sisa stok: ${prodData.stok} Bal.`,
+      }, { status: 400 });
+    }
+
+    // Domain Check: Cek ketersediaan stok kemasan plastik di gudang pembungkusan
+    const plasticBahanName = ukuranToPlastikBahanName(ukuran_plastik);
+    const { data: plasticStock } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah, satuan, nama_bahan')
+      .ilike('nama_bahan', plasticBahanName)
+      .maybeSingle();
+
+    if (!plasticStock || (plasticStock.jumlah || 0) <= 0) {
+      return NextResponse.json({
+        message: `Ukuran kemasan "${ukuran_plastik}" saat ini sedang kosong/habis di gudang pembungkusan. Silakan pilih kemasan lain yang tersedia.`,
       }, { status: 400 });
     }
 
