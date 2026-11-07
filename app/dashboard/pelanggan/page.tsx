@@ -5,6 +5,7 @@ import RoleGuard from '@/components/auth/role-guard';
 import { useAuth } from '@/context/auth-context';
 import StateAlert, { StateType } from '@/components/ui/state-alert';
 import { validateForm } from '@/lib/validation';
+import { getHargaBumbu, getHargaPlastik, DAFTAR_PLASTIK_OPTIONS, DAFTAR_VARIAN_OPTIONS } from '@/lib/pricing';
 import { 
   ShoppingBag, 
   Clock, 
@@ -170,11 +171,8 @@ export default function PelangganDashboardPage() {
     setSelectedProduct(item);
     setOrderQty(1);
     setOrderVarian('Original');
-    const availablePlastic = plastikList.find((p) => (p.jumlah || 0) > 0);
-    const initialUkuran = availablePlastic
-      ? availablePlastic.nama_bahan.replace(/Plastik Ukuran\s*/i, '').trim()
-      : '1/2 kg';
-    setOrderPlastik(initialUkuran);
+    setOrderPlastik('1/2 kg');
+    
     setOrderMetode('tunai');
     setValidationErrors({});
     setActionState({ type: 'idle', message: null });
@@ -201,17 +199,6 @@ export default function PelangganDashboardPage() {
       return;
     }
 
-    // Validasi ketersediaan stok fisik kemasan plastik di gudang pembungkusan
-    const chosenPlastic = plastikList.find(
-      (p) => p.nama_bahan.replace(/Plastik Ukuran\s*/i, '').trim().toLowerCase() === orderPlastik.trim().toLowerCase()
-    );
-    if (chosenPlastic && (chosenPlastic.jumlah || 0) <= 0) {
-      setActionState({
-        type: 'error',
-        message: `Kemasan "${orderPlastik}" saat ini sedang kosong/habis di gudang pembungkusan (Stok: 0). Silakan pilih ukuran lain yang tersedia.`,
-      });
-      return;
-    }
 
     setValidationErrors({});
     setActionState({ type: 'loading', message: 'Sedang memproses pesanan ke database Supabase...' });
@@ -958,95 +945,50 @@ export default function PelangganDashboardPage() {
                   )}
                 </div>
 
-                {/* 2. Pilihan Rasa (Domain Check) */}
+                {/* 2. Pilihan Rasa (Dengan Biaya Tambahan Bumbu) */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Pilihan Varian Rasa <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-bold text-gray-700">
+                      Pilihan Varian Rasa <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-brand-maroon font-semibold">
+                      +Biaya Bumbu Tertera
+                    </span>
+                  </div>
                   <select
                     value={orderVarian}
                     onChange={(e) => setOrderVarian(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
                   >
-                    <option value="Original">Original Gurih</option>
-                    <option value="Balado">Balado Manis Pedas</option>
-                    <option value="Pedas">Pedas Level 5</option>
-                    <option value="Keju">Keju Asin Gurih</option>
+                    {DAFTAR_VARIAN_OPTIONS.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label} (+Rp {v.harga.toLocaleString('id-ID')} / bal)
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                {/* 3. Pilihan Kemasan Plastik (Tersinkronisasi Real-Time dengan Gudang Pembungkusan) */}
+                {/* 3. Pilihan Kemasan Plastik (Tanpa Keterangan Stok Gudang - Khusus Pembungkus & Owner) */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-xs font-bold text-gray-700">
                       Ukuran Kemasan Plastik <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] text-gray-400 font-medium">
-                      ● Cek Stok Gudang Pembungkusan
+                    <span className="text-[10px] text-blue-800 font-semibold">
+                      +Biaya Kemasan Tertera
                     </span>
                   </div>
-
-                  {plastikList.length === 0 ? (
-                    <select
-                      value={orderPlastik}
-                      onChange={(e) => setOrderPlastik(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                    >
-                      <option value="1/2 kg">Kemasan Plastik 1/2 kg</option>
-                      <option value="1x25 kg">Kemasan Plastik 1x25 kg</option>
-                      <option value="30x45 kg">Kemasan Karung 30x45 kg</option>
-                    </select>
-                  ) : (
-                    <select
-                      value={orderPlastik}
-                      onChange={(e) => setOrderPlastik(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                    >
-                      {plastikList.map((p) => {
-                        const ukuran = p.nama_bahan.replace(/Plastik Ukuran\s*/i, '').trim();
-                        const isReady = (p.jumlah || 0) > 0;
-                        return (
-                          <option
-                            key={p.id_stok}
-                            value={ukuran}
-                            disabled={!isReady}
-                            className={isReady ? 'text-gray-900 font-semibold' : 'text-gray-400 bg-gray-100'}
-                          >
-                            Kemasan {ukuran} {isReady ? `(Tersedia: ${p.jumlah} ${p.satuan})` : '(Stok Habis / Kosong di Gudang)'}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  )}
-
-                  {/* Indikator Status Ketersediaan Kemasan Plastik Terpilih */}
-                  {(() => {
-                    const selectedP = plastikList.find(
-                      (p) => p.nama_bahan.replace(/Plastik Ukuran\s*/i, '').trim().toLowerCase() === orderPlastik.trim().toLowerCase()
-                    );
-                    if (selectedP) {
-                      if ((selectedP.jumlah || 0) <= 0) {
-                        return (
-                          <div className="mt-1.5 p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-1.5 font-medium animate-fadeIn">
-                            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                            <span>Stok kemasan <strong>{orderPlastik}</strong> kosong di gudang pembungkusan! Silakan pilih kemasan lain yang tersedia.</span>
-                          </div>
-                        );
-                      }
-                      return (
-                        <div className="mt-1.5 p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between font-medium">
-                          <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span>Kemasan <strong>{orderPlastik}</strong> siap dibungkus</span>
-                          </span>
-                          <span className="font-bold font-mono text-[11px] bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-md">
-                            Sisa: {selectedP.jumlah} {selectedP.satuan}
-                          </span>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                  <select
+                    value={orderPlastik}
+                    onChange={(e) => setOrderPlastik(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                  >
+                    {DAFTAR_PLASTIK_OPTIONS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label} (+Rp {p.harga.toLocaleString('id-ID')} / bal)
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* 4. Metode Pembayaran (SDD UC-12) */}
@@ -1178,23 +1120,43 @@ export default function PelangganDashboardPage() {
                   )}
                 </div>
 
-                {/* Total Ringkasan Biaya */}
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
-                  <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
-                    <span>Harga Satuan:</span>
-                    <span>Rp {Number(selectedProduct.harga).toLocaleString('id-ID')}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
-                    <span>Jumlah:</span>
-                    <span>{orderQty} {selectedProduct.satuan}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-sm font-black text-gray-900">
-                    <span>Total Pembayaran:</span>
-                    <span className="text-brand-maroon text-lg">
-                      Rp {(Number(selectedProduct.harga) * Math.max(1, orderQty)).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
+                {/* Total Ringkasan Biaya (Gabungan Kerupuk + Bumbu + Kemasan Plastik) */}
+                {(() => {
+                  const hargaKerupukSatuan = Number(selectedProduct.harga) || 0;
+                  const hargaBumbuSatuan = getHargaBumbu(orderVarian);
+                  const hargaPlastikSatuan = getHargaPlastik(orderPlastik);
+                  const qty = Math.max(1, Number(orderQty) || 1);
+                  const totalKerupuk = hargaKerupukSatuan * qty;
+                  const totalBumbu = hargaBumbuSatuan * qty;
+                  const totalPlastik = hargaPlastikSatuan * qty;
+                  const grandTotal = totalKerupuk + totalBumbu + totalPlastik;
+
+                  return (
+                    <div className="bg-gradient-to-br from-gray-50 to-amber-50/40 rounded-2xl p-4 border border-gray-200 space-y-2">
+                      <div className="flex justify-between items-center text-xs text-gray-600">
+                        <span>Harga Kerupuk ({qty} {selectedProduct.satuan}):</span>
+                        <span className="font-mono font-medium">Rp {totalKerupuk.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-gray-600">
+                        <span>Tambahan Bumbu ({orderVarian}):</span>
+                        <span className="font-mono font-medium text-brand-maroon">+Rp {totalBumbu.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-gray-600">
+                        <span>Tambahan Kemasan ({orderPlastik}):</span>
+                        <span className="font-mono font-medium text-blue-800">+Rp {totalPlastik.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2.5 border-t border-gray-200 text-sm font-black text-gray-900">
+                        <div>
+                          <span className="block leading-tight">Total Pembayaran:</span>
+                          <span className="text-[10px] text-gray-400 font-normal">Gabungan Kerupuk + Bumbu + Kemasan Plastik</span>
+                        </div>
+                        <span className="text-brand-maroon text-xl font-mono font-black">
+                          Rp {grandTotal.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button

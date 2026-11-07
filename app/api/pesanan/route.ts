@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
-import { deductRawMaterialOnOrder, ukuranToPlastikBahanName } from '@/lib/stock-sync';
+import { deductRawMaterialOnOrder } from '@/lib/stock-sync';
+import { getHargaBumbu, getHargaPlastik } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
         label: 'Ukuran Kemasan Plastik', 
         value: ukuran_plastik, 
         required: true, 
-        domain: { allowedValues: ['1/2 kg', '1x25 kg', '30x45 kg'] } 
+        domain: { allowedValues: ['1/2 kg', '1 1/2 kg', '1x25 kg', '11x25 kg', '30x45 kg', '12x22 kg', '12x23 kg', '12x25 kg'] } 
       },
       { 
         field: 'metode_pembayaran', 
@@ -116,21 +117,12 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Domain Check: Cek ketersediaan stok kemasan plastik di gudang pembungkusan
-    const plasticBahanName = ukuranToPlastikBahanName(ukuran_plastik);
-    const { data: plasticStock } = await supabase
-      .from('stok_bahan')
-      .select('id_stok, jumlah, satuan, nama_bahan')
-      .ilike('nama_bahan', plasticBahanName)
-      .maybeSingle();
-
-    if (!plasticStock || (plasticStock.jumlah || 0) <= 0) {
-      return NextResponse.json({
-        message: `Ukuran kemasan "${ukuran_plastik}" saat ini sedang kosong/habis di gudang pembungkusan. Silakan pilih kemasan lain yang tersedia.`,
-      }, { status: 400 });
-    }
-
-    const totalHarga = Number(prodData.harga) * qty;
+    // Kalkulasi total harga gabungan: (Harga Kerupuk + Tambahan Bumbu + Tambahan Plastik) * Qty
+    const hargaKerupukSatuan = Number(prodData.harga) || 0;
+    const hargaBumbu = getHargaBumbu(varian_rasa);
+    const hargaPlastik = getHargaPlastik(ukuran_plastik);
+    const hargaPerBal = hargaKerupukSatuan + hargaBumbu + hargaPlastik;
+    const totalHarga = hargaPerBal * qty;
 
     // 1. Simpan ke tabel pesanan
     const { data: orderData, error: orderErr } = await supabase
