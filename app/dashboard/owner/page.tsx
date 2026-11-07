@@ -1106,7 +1106,7 @@ export default function OwnerDashboardPage() {
                         Monitoring Bahan Mentah Dapur Penggorengan (1 Bal = 5 Kg)
                       </h3>
                       <p className="text-[11px] text-gray-500">
-                        Pasokan supplier bertambah saat Owner restock, dan berkurang otomatis saat Staf Penggoreng mencatat pemakaian ke wajan.
+                        Pasokan supplier bertambah saat Owner restock, dan berkurang otomatis sesuai pesanan kerupuk goreng dadakan pelanggan.
                       </p>
                     </div>
                   </div>

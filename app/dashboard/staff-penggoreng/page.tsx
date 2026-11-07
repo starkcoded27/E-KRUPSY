@@ -4,21 +4,16 @@ import React, { useState, useEffect } from 'react';
 import RoleGuard from '@/components/auth/role-guard';
 import { useAuth } from '@/context/auth-context';
 import StateAlert, { StateType } from '@/components/ui/state-alert';
-import { validateForm } from '@/lib/validation';
 import { 
   Flame, 
   Package, 
   CheckCircle2, 
   Clock, 
   Layers, 
-  ArrowRight, 
   RefreshCw,
-  X,
-  AlertCircle,
   AlertTriangle,
-  MinusCircle,
   ShieldCheck,
-  Scale
+  Eye
 } from 'lucide-react';
 
 interface ProduksiItem {
@@ -71,12 +66,6 @@ export default function StaffPenggorengDashboardPage() {
     type: 'idle',
     message: null,
   });
-
-  // Modal Catat Pemakaian / Kurangi Bahan Mentah (Penggoreng)
-  const [showReduceModal, setShowReduceModal] = useState(false);
-  const [selectedStockToReduce, setSelectedStockToReduce] = useState<StokItem | null>(null);
-  const [reduceAmount, setReduceAmount] = useState<number>(5);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -142,66 +131,6 @@ export default function StaffPenggorengDashboardPage() {
     }
   };
 
-  // Handler Kurangi Stok Bahan yang Dipakai ke Wajan (Penggoreng)
-  const handleReduceStockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedStockToReduce) {
-      setActionState({ type: 'error', message: 'Silakan pilih bahan baku yang dipakai.' });
-      return;
-    }
-
-    // 4 JENIS VALIDASI INPUT
-    const validation = validateForm([
-      { field: 'nama_bahan', label: 'Nama Bahan Baku', value: selectedStockToReduce.nama_bahan, required: true, dataType: 'string' },
-      { 
-        field: 'jumlah', 
-        label: 'Jumlah yang Dipakai', 
-        value: reduceAmount, 
-        required: true, 
-        dataType: 'integer', 
-        domain: { min: 1, max: selectedStockToReduce.jumlah } 
-      },
-    ]);
-
-    if (!validation.isValid) {
-      setValidationErrors(validation.errors);
-      setActionState({ type: 'error', message: validation.firstError });
-      return;
-    }
-
-    setValidationErrors({});
-    setActionState({ type: 'loading', message: `Mencatat pemakaian ${reduceAmount} ${selectedStockToReduce.satuan} ke database...` });
-
-    try {
-      const res = await fetch('/api/stok', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reduce',
-          nama_bahan: selectedStockToReduce.nama_bahan,
-          kategori: selectedStockToReduce.kategori,
-          satuan: selectedStockToReduce.satuan,
-          jumlah: Number(reduceAmount),
-          id_user: user?.id_user,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setActionState({ type: 'error', message: data.message || 'Gagal mencatat pemakaian bahan.' });
-        return;
-      }
-
-      setActionState({ type: 'success', message: data.message });
-      setShowReduceModal(false);
-      await fetchData();
-    } catch {
-      setActionState({ type: 'error', message: 'Gagal menghubungi database stok.' });
-    }
-  };
-
   // Filter antrean penggorengan yang belum selesai
   const fryingTasks = productionList.filter((p) => p.status_produksi !== 'selesai');
 
@@ -219,7 +148,7 @@ export default function StaffPenggorengDashboardPage() {
               Antrean Penggorengan & Stok Wajan
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
-              Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau stok bahan mentah dan mencatat bahan yang dipakai ke wajan.
+              Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau ketersediaan stok bahan baku wajan dan memproses antrean penggorengan pesanan pelanggan.
             </p>
           </div>
 
@@ -230,22 +159,7 @@ export default function StaffPenggorengDashboardPage() {
               className="inline-flex items-center gap-1.5 text-xs text-white font-bold bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl border border-white/20 transition"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              Muat Ulang Antrean
-            </button>
-            <button
-              onClick={() => {
-                const defaultItem = stockList.find((s) => s.kategori === 'Kerupuk Mentah') || stockList[0];
-                if (defaultItem) {
-                  setSelectedStockToReduce(defaultItem);
-                  setReduceAmount(5);
-                  setShowReduceModal(true);
-                  setActionState({ type: 'idle', message: null });
-                }
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-brand-darkmaroon font-bold bg-amber-300 hover:bg-amber-200 px-3.5 py-2 rounded-xl shadow-md transition"
-            >
-              <Flame className="w-3.5 h-3.5 text-brand-darkmaroon" />
-              🔥 Catat Pemakaian Bahan Wajan
+              Muat Ulang Antrean & Stok
             </button>
           </div>
         </div>
@@ -410,44 +324,33 @@ export default function StaffPenggorengDashboardPage() {
           )}
         </div>
 
-        {/* KETERSEDIAAN STOK BAHAN BAKU & BUMBU DI DAPUR (OUTPUT UNTUK PENGGORENG) */}
+        {/* KETERSEDIAAN STOK BAHAN BAKU & BUMBU DI DAPUR (VIEW OUTPUT UNTUK PENGGORENG) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                   <Layers className="w-5 h-5 text-brand-maroon" />
-                  Ketersediaan Stok Bahan Baku & Bumbu di Dapur
+                  Ketersediaan Stok Bahan Baku & Bumbu di Dapur (View Output)
                 </h2>
                 <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
                   Goreng Dadakan
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Output ketersediaan bahan mentah. <strong>1 Bal = 5 Kg mentah</strong>. Input penambahan pasokan supplier dikelola oleh <strong>Owner</strong>, staf penggoreng mencatat pemakaian ke wajan.
+                Output pemantauan ketersediaan bahan baku wajan (<strong>1 Bal = 5 Kg mentah</strong>). Pasokan bahan baku dikelola langsung oleh <strong>Owner</strong>.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                Mode: Khusus Pantau Stok (View Only)
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded-xl border border-gray-200">
                 <ShieldCheck className="w-3.5 h-3.5 text-brand-maroon" />
                 Input Pasokan: Khusus Owner
               </span>
-              <button
-                onClick={() => {
-                  const defaultItem = stockList.find((s) => s.kategori === 'Kerupuk Mentah') || stockList[0];
-                  if (defaultItem) {
-                    setSelectedStockToReduce(defaultItem);
-                    setReduceAmount(5);
-                    setShowReduceModal(true);
-                    setActionState({ type: 'idle', message: null });
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-sm transition shrink-0"
-              >
-                <MinusCircle className="w-4 h-4" />
-                - Pakai Bahan
-              </button>
             </div>
           </div>
 
@@ -461,11 +364,11 @@ export default function StaffPenggorengDashboardPage() {
                 return (
                   <div
                     key={stok.id_stok}
-                    className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 flex flex-col justify-between hover:border-brand-maroon/30 transition"
+                    className="p-4 rounded-2xl border border-gray-200 bg-gray-50 flex flex-col justify-between hover:border-brand-maroon/30 transition shadow-sm"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-1 mb-1">
-                        <span className="font-semibold text-gray-900 text-xs block leading-tight">{stok.nama_bahan}</span>
+                        <span className="font-bold text-gray-900 text-sm block leading-tight">{stok.nama_bahan}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                           stok.jumlah < 20
                             ? 'bg-red-100 text-red-700 border border-red-200'
@@ -475,144 +378,26 @@ export default function StaffPenggorengDashboardPage() {
                         </span>
                       </div>
 
-                      <span className="text-base font-black text-brand-maroon mt-1 block">
+                      <span className="text-xl font-black text-brand-maroon mt-2 block">
                         {stok.jumlah} {stok.satuan}
                       </span>
 
                       {isMentah && balEquivalent !== null && (
-                        <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 block w-fit mt-1">
+                        <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-1 rounded-md border border-orange-200 block w-fit mt-2">
                           Setara {balEquivalent} Bal di Katalog
                         </span>
                       )}
-                      <span className="text-[10px] text-gray-400 block mt-1">Update: {stok.tanggal_update}</span>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={stok.jumlah <= 0}
-                      onClick={() => {
-                        setSelectedStockToReduce(stok);
-                        setReduceAmount(isMentah ? 5 : 1);
-                        setShowReduceModal(true);
-                        setActionState({ type: 'idle', message: null });
-                      }}
-                      className="mt-3 w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-2 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded-lg text-xs font-bold transition border border-orange-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Flame className="w-3.5 h-3.5 text-orange-600" />
-                      Pakai Bahan (-{stok.satuan})
-                    </button>
+                    <div className="pt-3 mt-3 border-t border-gray-200/70 flex items-center justify-between text-[11px] text-gray-500">
+                      <span>Kategori: {stok.kategori}</span>
+                      <span>Update: {stok.tanggal_update}</span>
+                    </div>
                   </div>
                 );
               })}
           </div>
         </div>
-
-        {/* MODAL CATAT PEMAKAIAN BAHAN / PENGURANGAN STOK DAPUR */}
-        {showReduceModal && selectedStockToReduce && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center">
-                    <Flame className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base">Catat Pemakaian Wajan</h3>
-                    <p className="text-[11px] text-gray-500">Mengurangi stok bahan mentah yang digoreng</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowReduceModal(false)}
-                  className="p-1 rounded-xl text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleReduceStockSubmit} className="space-y-4">
-                {/* 1. Pilih Bahan yang Dipakai */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Bahan Baku yang Digunakan <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={selectedStockToReduce.id_stok}
-                    onChange={(e) => {
-                      const item = stockList.find((s) => s.id_stok === Number(e.target.value));
-                      if (item) {
-                        setSelectedStockToReduce(item);
-                        setReduceAmount(item.kategori === 'Kerupuk Mentah' ? 5 : 1);
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                  >
-                    {stockList
-                      .filter((s) => s.kategori !== 'Plastik')
-                      .map((stok) => (
-                        <option key={stok.id_stok} value={stok.id_stok}>
-                          {stok.nama_bahan} (Sisa: {stok.jumlah} {stok.satuan})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Info Card Stok Tersedia */}
-                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-1">
-                  <div className="flex justify-between items-center font-bold">
-                    <span>Stok Dapur Saat Ini:</span>
-                    <span className="font-mono text-sm">{selectedStockToReduce.jumlah} {selectedStockToReduce.satuan}</span>
-                  </div>
-                  {selectedStockToReduce.kategori === 'Kerupuk Mentah' && (
-                    <div className="text-[11px] text-amber-800/90 pt-1 border-t border-amber-200/60">
-                      ⚡ Mengurangi <strong>{reduceAmount} Kg</strong> mentah akan otomatis memotong <strong>~{Math.floor(reduceAmount / 5)} Bal</strong> pada katalog produk Pelanggan & Owner (1 Bal = 5 Kg).
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Jumlah Pemakaian */}
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-xs font-bold text-gray-700">
-                      Jumlah Bahan yang Dipakai ({selectedStockToReduce.satuan}) <span className="text-red-500">*</span>
-                    </label>
-                    <span className="text-[11px] text-gray-400">
-                      Maksimal: {selectedStockToReduce.jumlah} {selectedStockToReduce.satuan}
-                    </span>
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    max={selectedStockToReduce.jumlah}
-                    value={reduceAmount}
-                    onChange={(e) => setReduceAmount(parseInt(e.target.value) || 0)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                    required
-                  />
-                  {validationErrors.jumlah && (
-                    <p className="text-[11px] text-red-600 mt-1">{validationErrors.jumlah}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowReduceModal(false)}
-                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={actionState.type === 'loading' || selectedStockToReduce.jumlah <= 0}
-                    className="py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
-                  >
-                    {actionState.type === 'loading' ? 'Menyimpan...' : 'Kurangi Stok Dapur'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </RoleGuard>
   );
