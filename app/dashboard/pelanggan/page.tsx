@@ -1021,12 +1021,12 @@ export default function PelangganDashboardPage() {
                         <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
                           <div>
                             <span className="font-bold text-gray-900 text-[11px] block">Bank BCA (Transfer)</span>
-                            <span className="font-mono font-black text-blue-900 text-xs">139-082-9912</span>
-                            <span className="text-[10px] text-gray-400 block">a/n Bapak Diansyah</span>
+                            <span className="font-mono font-black text-blue-900 text-xs">7405136830</span>
+                            <span className="text-[10px] text-gray-400 block">a/n Anita Nurhayati</span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleCopyAccount('1390829912', 'BCA')}
+                            onClick={() => handleCopyAccount('7405136830', 'BCA')}
                             className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
                           >
                             {copiedAccount === 'BCA' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
@@ -1036,12 +1036,12 @@ export default function PelangganDashboardPage() {
                         <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
                           <div>
                             <span className="font-bold text-gray-900 text-[11px] block">Bank Mandiri (Transfer)</span>
-                            <span className="font-mono font-black text-blue-900 text-xs">182-000-482-991</span>
-                            <span className="text-[10px] text-gray-400 block">a/n Pabrik Kerupuk Diansyah</span>
+                            <span className="font-mono font-black text-blue-900 text-xs">1320023382287</span>
+                            <span className="text-[10px] text-gray-400 block">a/n Diansiah Hidayat</span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleCopyAccount('182000482991', 'Mandiri')}
+                            onClick={() => handleCopyAccount('1320023382287', 'Mandiri')}
                             className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
                           >
                             {copiedAccount === 'Mandiri' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
@@ -1050,17 +1050,17 @@ export default function PelangganDashboardPage() {
                         </div>
                         <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
                           <div>
-                            <span className="font-bold text-gray-900 text-[11px] block">Bank BRI (Transfer)</span>
-                            <span className="font-mono font-black text-blue-900 text-xs">0123-01-089921-50-3</span>
-                            <span className="text-[10px] text-gray-400 block">a/n Diansyah</span>
+                            <span className="font-bold text-gray-900 text-[11px] block">Bank BJB (Transfer)</span>
+                            <span className="font-mono font-black text-blue-900 text-xs">0139544684100</span>
+                            <span className="text-[10px] text-gray-400 block">a/n Diansiah Hidayat</span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleCopyAccount('012301089921503', 'BRI')}
+                            onClick={() => handleCopyAccount('0139544684100', 'BJB')}
                             className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
                           >
-                            {copiedAccount === 'BRI' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                            <span>{copiedAccount === 'BRI' ? 'Tersalin' : 'Salin'}</span>
+                            {copiedAccount === 'BJB' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedAccount === 'BJB' ? 'Tersalin' : 'Salin'}</span>
                           </button>
                         </div>
                       </div>
@@ -1478,7 +1478,7 @@ export default function PelangganDashboardPage() {
                   >
                     <option value="Bank BCA (139-082-9912 a/n Bapak Diansyah)">Bank BCA &bull; 139-082-9912 (Bapak Diansyah)</option>
                     <option value="Bank Mandiri (182-000-482-991 a/n Pabrik Kerupuk Diansyah)">Bank Mandiri &bull; 182-000-482-991 (Pabrik Kerupuk Diansyah)</option>
-                    <option value="Bank BRI (0123-01-089921-50-3 a/n Diansyah)">Bank BRI &bull; 0123-01-089921-50-3 (Diansyah)</option>
+                    <option value="Bank BJB (0139-544-684-100 a/n Diansyah)">Bank BJB &bull; 0139-544-684-100 (Diansyah)</option>
                   </select>
                 </div>
 
