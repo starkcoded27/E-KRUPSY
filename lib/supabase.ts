@@ -22,3 +22,12 @@ export const getSupabaseServerClient = () => {
     auth: { persistSession: false },
   });
 };
+
+// Konstanta query relasi tabel pesanan untuk menghindari Shotgun Surgery dan Duplikasi Query
+export const PESANAN_RELATION_QUERY = `
+  *,
+  produk:id_produk (*),
+  pelanggan:id_pelanggan (*),
+  pembayaran (*),
+  produksi (*, verifikasi:verifikasi_produksi (*))
+`;

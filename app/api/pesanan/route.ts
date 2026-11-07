@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabase';
+import { getSupabaseServerClient, PESANAN_RELATION_QUERY } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
@@ -13,15 +13,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const idPelanggan = searchParams.get('id_pelanggan');
 
+  // Menggunakan query string relasi terpusat dari lib/supabase untuk clean code
   let query = supabase
     .from('pesanan')
-    .select(`
-      *,
-      produk:id_produk (*),
-      pelanggan:id_pelanggan (*),
-      pembayaran (*),
-      produksi (*, verifikasi:verifikasi_produksi (*))
-    `)
+    .select(PESANAN_RELATION_QUERY)
     .order('id_pesanan', { ascending: false });
 
   if (idPelanggan) {

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabase';
+import { getSupabaseServerClient, PESANAN_RELATION_QUERY } from '@/lib/supabase';
 import { generateChartData } from '@/lib/chart-data';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+// Konstanta rasio keuangan untuk menghindari magic numbers
+const ESTIMASI_HPP_RATIO = 0.7; // Biaya Bahan Baku & Operasional Pabrik (~70%)
+const ESTIMASI_LABA_BERSIH_RATIO = 0.3; // Estimasi Margin Keuntungan Bersih (~30%)
 
 export async function GET(req: NextRequest) {
   const supabase = getSupabaseServerClient();
@@ -12,19 +16,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // 1. Ambil semua pesanan dengan relasi
+    // 1. Ambil semua pesanan dengan query relasi terpusat (Clean Code)
     const { data: pesananList, error: orderErr } = await supabase
       .from('pesanan')
-      .select(`
-        *,
-        produk:id_produk (*),
-        pelanggan:id_pelanggan (*),
-        pembayaran (*),
-        produksi (*, verifikasi:verifikasi_produksi (*))
-      `)
+      .select(PESANAN_RELATION_QUERY)
       .order('id_pesanan', { ascending: false });
-
-    console.log('[API LAPORAN] Raw pesanan from DB:', pesananList?.length, 'error:', orderErr);
 
     if (orderErr) {
       return NextResponse.json({ message: 'Gagal mengambil data laporan: ' + orderErr.message }, { status: 500 });
@@ -45,9 +41,9 @@ export async function GET(req: NextRequest) {
     const totalKasMasuk = paidOrders.reduce((sum, o) => sum + (Number(o.total_harga) || 0), 0);
     const totalPiutang = pendingOrders.reduce((sum, o) => sum + (Number(o.total_harga) || 0), 0);
 
-    // 3. Estimasi HPP (Bahan Baku & Operasional Pabrik ~70%) & Laba Bersih (~30%)
-    const estimasiHPP = Math.round(totalOmset * 0.7);
-    const estimasiKeuntungan = Math.round(totalOmset * 0.3);
+    // 3. Estimasi HPP & Laba Bersih menggunakan konstanta semantik
+    const estimasiHPP = Math.round(totalOmset * ESTIMASI_HPP_RATIO);
+    const estimasiKeuntungan = Math.round(totalOmset * ESTIMASI_LABA_BERSIH_RATIO);
 
     // 4. Rekapitulasi per Metode Pembayaran
     const rekapMetode: Record<string, { count: number; total: number; lunas: number }> = {
