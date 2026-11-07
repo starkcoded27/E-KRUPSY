@@ -676,8 +676,8 @@ export default function PelangganDashboardPage() {
 
                       <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                          <h4 className="font-bold text-gray-900 text-lg sm:text-xl">{order.produk?.nama_produk}</h4>
-                          <div className="text-sm sm:text-base text-gray-600 space-y-1 mt-1.5 font-normal">
+                          <h4 className="font-bold text-gray-900 text-base">{order.produk?.nama_produk}</h4>
+                          <div className="text-sm text-gray-600 space-y-1 mt-1 font-normal">
                             <p>Jumlah: <strong className="font-semibold text-gray-900">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong></p>
                             <p>Varian: <strong className="font-semibold text-gray-900">{order.varian_rasa}</strong> &bull; Kemasan: <strong className="font-semibold text-gray-900">{order.ukuran_plastik}</strong></p>
                             <p>Metode Pembayaran: <strong className="uppercase font-semibold text-gray-900">{payInfo?.metode_pembayaran || 'Tunai'}</strong></p>
@@ -686,7 +686,7 @@ export default function PelangganDashboardPage() {
 
                         <div className="text-left sm:text-right">
                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Total Tagihan:</span>
-                          <span className="text-2xl sm:text-3xl font-extrabold text-brand-maroon block">
+                          <span className="text-base font-bold text-brand-maroon block">
                             Rp {Number(order.total_harga).toLocaleString('id-ID')}
                           </span>
                         </div>
