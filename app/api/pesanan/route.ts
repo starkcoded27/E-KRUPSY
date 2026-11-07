@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
+import { deductRawMaterialOnOrder } from '@/lib/stock-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -167,11 +168,14 @@ export async function POST(req: NextRequest) {
       console.error('Error insert antrean produksi:', prodQueueErr);
     }
 
-    // 4. Kurangi stok produk di database
+    // 4. Kurangi stok produk dan sinkronkan stok bahan mentah di dapur penggorengan dadakan
     await supabase
       .from('produk')
       .update({ stok: Math.max(0, prodData.stok - qty) })
       .eq('id_produk', Number(id_produk));
+
+    // Otomatis potong stok kerupuk mentah (5 Kg per 1 Bal goreng dadakan)
+    await deductRawMaterialOnOrder(supabase, prodData.nama_produk, qty);
 
     return NextResponse.json({
       success: true,

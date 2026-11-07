@@ -948,9 +948,14 @@ export default function OwnerDashboardPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl">
                   <div className="flex items-center gap-2.5 text-xs text-amber-900">
                     <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
-                    <p className="leading-relaxed">
-                      <strong>Validasi Anti-Duplikasi:</strong> Sistem mencegah penambahan katalog dengan nama yang sama (misal <strong>Makaroni</strong>). Setiap produk baru wajib memiliki nama yang unik.
-                    </p>
+                    <div className="leading-relaxed">
+                      <p>
+                        <strong>Sistem Produksi Goreng Dadakan (Make-To-Order):</strong> Stok kerupuk katalog dihitung langsung dari pasokan bahan mentah supplier di dapur penggorengan (<strong>1 Bal = 5 Kg kerupuk mentah</strong>).
+                      </p>
+                      <p className="text-[11px] text-amber-800/80 mt-0.5">
+                        Saat pelanggan memesan, stok mentah di dapur otomatis terpotong. Nama produk bersifat unik (tidak dapat diduplikasi).
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={() => {
@@ -972,7 +977,7 @@ export default function OwnerDashboardPage() {
                         <th className="py-3 px-3">Nama Produk Kerupuk</th>
                         <th className="py-3 px-3">Satuan</th>
                         <th className="py-3 px-3">Harga Jual</th>
-                        <th className="py-3 px-3">Stok Siap Jual</th>
+                        <th className="py-3 px-3">Kapasitas Stok Jual</th>
                         <th className="py-3 px-3">Status Stok</th>
                         <th className="py-3 px-3">Keterangan</th>
                       </tr>
@@ -1000,8 +1005,11 @@ export default function OwnerDashboardPage() {
                             <td className="py-3 px-3 font-mono font-bold text-gray-900">
                               Rp {Number(prod.harga).toLocaleString('id-ID')}
                             </td>
-                            <td className="py-3 px-3 font-semibold text-gray-800">
-                              {prod.stok} {prod.satuan}
+                            <td className="py-3 px-3">
+                              <span className="font-bold text-gray-900 block">{prod.stok} {prod.satuan}</span>
+                              <span className="text-[10px] text-gray-400 font-mono block">
+                                (~{prod.stok * 5} Kg bahan mentah)
+                              </span>
                             </td>
                             <td className="py-3 px-3">
                               {prod.stok > 10 ? (

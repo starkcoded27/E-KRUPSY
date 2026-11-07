@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
+import { productToBahanName, KG_PER_BAL } from '@/lib/stock-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,10 +93,139 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Gagal menyimpan produk ke database: ' + error.message }, { status: 500 });
     }
 
+    // Sinkronisasi otomatis ke stok_bahan (Dapur Penggorengan Dadakan)
+    const bahanName = productToBahanName(cleanNama);
+    const kgEquivalent = Number(stok) * KG_PER_BAL;
+
+    const { data: existingBahan } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah')
+      .ilike('nama_bahan', bahanName)
+      .maybeSingle();
+
+    if (existingBahan) {
+      await supabase
+        .from('stok_bahan')
+        .update({
+          jumlah: (existingBahan.jumlah || 0) + kgEquivalent,
+          tanggal_update: new Date().toISOString().split('T')[0],
+        })
+        .eq('id_stok', existingBahan.id_stok);
+    } else {
+      await supabase
+        .from('stok_bahan')
+        .insert({
+          nama_bahan: bahanName,
+          kategori: 'Kerupuk Mentah',
+          satuan: 'Kg',
+          jumlah: kgEquivalent,
+          tanggal_update: new Date().toISOString().split('T')[0],
+        });
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Produk kerupuk baru berhasil ditambahkan.',
+      message: `Produk kerupuk baru berhasil ditambahkan (${stok} Bal setara ${kgEquivalent} Kg mentah di dapur).`,
       data: newProd,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ message: 'Terjadi kesalahan sistem: ' + err.message }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH: Restock / Tambah Stok Produk oleh Owner (Pasokan Supplier)
+ * Otomatis menambah stok Bal di produk dan stok Kg di stok_bahan (Dapur Wajan Penggoreng)
+ */
+export async function PATCH(req: NextRequest) {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
+  }
+
+  try {
+    const body = await req.json();
+    const { id_produk, additional_stok } = body;
+
+    const validation = validateForm([
+      { field: 'id_produk', label: 'ID Produk', value: id_produk, required: true, dataType: 'integer' },
+      { 
+        field: 'additional_stok', 
+        label: 'Jumlah Tambahan Bal', 
+        value: additional_stok, 
+        required: true, 
+        dataType: 'integer', 
+        domain: { min: 1, max: 5000 } 
+      },
+    ]);
+
+    if (!validation.isValid) {
+      return NextResponse.json({
+        message: validation.firstError || 'Data restock tidak valid.',
+        errors: validation.errors,
+      }, { status: 400 });
+    }
+
+    const { data: currentProd, error: fetchErr } = await supabase
+      .from('produk')
+      .select('*')
+      .eq('id_produk', Number(id_produk))
+      .maybeSingle();
+
+    if (fetchErr || !currentProd) {
+      return NextResponse.json({ message: 'Produk tidak ditemukan di katalog.' }, { status: 404 });
+    }
+
+    const addBal = Number(additional_stok);
+    const newStokBal = (currentProd.stok || 0) + addBal;
+
+    const { data: updatedProd, error: updateErr } = await supabase
+      .from('produk')
+      .update({ stok: newStokBal })
+      .eq('id_produk', Number(id_produk))
+      .select()
+      .single();
+
+    if (updateErr) {
+      return NextResponse.json({ message: 'Gagal memperbarui stok produk: ' + updateErr.message }, { status: 500 });
+    }
+
+    // Sinkronisasi otomatis ke stok_bahan (Dapur Penggorengan Dadakan)
+    // 1 Bal = 5 Kg kerupuk mentah
+    const bahanName = productToBahanName(currentProd.nama_produk);
+    const kgEquivalent = addBal * KG_PER_BAL;
+
+    const { data: existingBahan } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah')
+      .ilike('nama_bahan', bahanName)
+      .maybeSingle();
+
+    if (existingBahan) {
+      const newKg = (existingBahan.jumlah || 0) + kgEquivalent;
+      await supabase
+        .from('stok_bahan')
+        .update({
+          jumlah: newKg,
+          tanggal_update: new Date().toISOString().split('T')[0],
+        })
+        .eq('id_stok', existingBahan.id_stok);
+    } else {
+      await supabase
+        .from('stok_bahan')
+        .insert({
+          nama_bahan: bahanName,
+          kategori: 'Kerupuk Mentah',
+          satuan: 'Kg',
+          jumlah: kgEquivalent,
+          tanggal_update: new Date().toISOString().split('T')[0],
+        });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Berhasil restock ${currentProd.nama_produk}: +${addBal} Bal (Otomatis menambah +${kgEquivalent} Kg bahan mentah di dapur). Total stok sekarang: ${newStokBal} Bal.`,
+      data: updatedProd,
     });
   } catch (err: any) {
     return NextResponse.json({ message: 'Terjadi kesalahan sistem: ' + err.message }, { status: 500 });
