@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getSupabaseServerClient, isSupabaseConfigured } from '@/lib/supabase';
 import { localStore } from '@/lib/mock-data';
+import { validateForm } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
+
+// Konstanta batas karakter & angka untuk menghilangkan Code Smell Magic Numbers
+const MIN_PASSWORD_LENGTH = 6;
+const MIN_PHONE_DIGITS = 9;
+const MAX_PHONE_DIGITS = 15;
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,17 +24,45 @@ export async function POST(req: NextRequest) {
       jenis_kelamin,
     } = body;
 
-    // Validasi form
-    if (!nama_lengkap || !username || !email || !password || !no_telp || !alamat) {
-      return NextResponse.json(
-        { message: 'Harap lengkapi semua data formulir pendaftaran.' },
-        { status: 400 }
-      );
-    }
+    // Refactoring: Menggunakan modul validasi terpusat (lib/validation.ts) menggantikan if-else bertumpuk
+    const validation = validateForm([
+      { field: 'nama_lengkap', label: 'Nama Lengkap', value: nama_lengkap, required: true },
+      { field: 'username', label: 'Username', value: username, required: true },
+      { field: 'email', label: 'Email', value: email, required: true, format: 'email' },
+      { 
+        field: 'password', 
+        label: 'Password', 
+        value: password, 
+        required: true,
+        customValidator: (val) => {
+          if (String(val).length < MIN_PASSWORD_LENGTH) {
+            return `Password minimal harus ${MIN_PASSWORD_LENGTH} karakter.`;
+          }
+          return null;
+        }
+      },
+      { 
+        field: 'no_telp', 
+        label: 'Nomor Telepon', 
+        value: no_telp, 
+        required: true,
+        customValidator: (val) => {
+          const clean = String(val).trim();
+          if (!/^[0-9]+$/.test(clean)) {
+            return 'Nomor telepon harus berupa angka (integer), tidak boleh mengandung huruf atau simbol.';
+          }
+          if (clean.length < MIN_PHONE_DIGITS || clean.length > MAX_PHONE_DIGITS) {
+            return `Nomor telepon harus terdiri dari ${MIN_PHONE_DIGITS} hingga ${MAX_PHONE_DIGITS} digit angka.`;
+          }
+          return null;
+        }
+      },
+      { field: 'alamat', label: 'Alamat', value: alamat, required: true },
+    ]);
 
-    if (password.length < 6) {
+    if (!validation.isValid) {
       return NextResponse.json(
-        { message: 'Password minimal harus 6 karakter.' },
+        { message: validation.firstError || 'Harap lengkapi semua data formulir pendaftaran.' },
         { status: 400 }
       );
     }
@@ -38,21 +72,6 @@ export async function POST(req: NextRequest) {
     const cleanNama = String(nama_lengkap).trim();
     const cleanNoTelp = String(no_telp).trim();
     const cleanAlamat = String(alamat).trim();
-
-    // Validasi tipe data nomor telepon (wajib integer / angka, tidak boleh huruf)
-    if (!/^[0-9]+$/.test(cleanNoTelp)) {
-      return NextResponse.json(
-        { message: 'Nomor telepon harus berupa angka (integer), tidak boleh mengandung huruf atau simbol.' },
-        { status: 400 }
-      );
-    }
-
-    if (cleanNoTelp.length < 9 || cleanNoTelp.length > 15) {
-      return NextResponse.json(
-        { message: 'Nomor telepon harus terdiri dari 9 hingga 15 digit angka.' },
-        { status: 400 }
-      );
-    }
 
     // 1. Cek duplikasi di Supabase jika terkonfigurasi
     if (isSupabaseConfigured) {
