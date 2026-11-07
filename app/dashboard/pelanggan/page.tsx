@@ -440,7 +440,7 @@ export default function PelangganDashboardPage() {
     // 2. Siap Diambil / Selesai
     if (order.status_pesanan === 'selesai' || prod?.status_produksi === 'selesai') {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 px-3.5 py-1.5">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-base font-extrabold bg-emerald-100 text-emerald-950 border-2 border-emerald-400 px-4 py-2 rounded-xl">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
           4. Siap Diambil / Selesai
         </span>
@@ -481,7 +481,7 @@ export default function PelangganDashboardPage() {
 
     // 6. Menunggu Diproses
     return (
-      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-900 border border-amber-300 px-3.5 py-1.5">
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-base font-extrabold bg-amber-100 text-amber-950 border-2 border-amber-400 px-4 py-2 rounded-xl">
         <Clock className="w-3.5 h-3.5 text-amber-600" />
         1. Menunggu Diproses
       </span>
@@ -676,8 +676,8 @@ export default function PelangganDashboardPage() {
 
                       <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                          <h4 className="font-black text-gray-900 text-xl sm:text-2xl">{order.produk?.nama_produk}</h4>
-                          <div className="text-sm sm:text-base text-gray-600 space-y-1.5 mt-2 font-medium">
+                          <h4 className="font-black text-gray-900 text-2xl sm:text-3xl font-black">{order.produk?.nama_produk}</h4>
+                          <div className="text-base sm:text-lg text-gray-700 space-y-2 mt-2.5 font-medium">
                             <p>Jumlah: <strong className="text-gray-800">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong></p>
                             <p>Varian: <strong className="text-gray-800">{order.varian_rasa}</strong> &bull; Kemasan: <strong className="text-gray-800">{order.ukuran_plastik}</strong></p>
                             <p>Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong></p>
@@ -686,7 +686,7 @@ export default function PelangganDashboardPage() {
 
                         <div className="text-right">
                           <span className="text-sm font-bold text-gray-500 block">Total Tagihan:</span>
-                          <span className="text-2xl sm:text-3xl font-black text-brand-maroon">
+                          <span className="text-3xl sm:text-4xl font-black text-brand-maroon">
                             Rp {Number(order.total_harga).toLocaleString('id-ID')}
                           </span>
                         </div>
@@ -738,7 +738,7 @@ export default function PelangganDashboardPage() {
                               )}
                             </div>
 
-                            <span className="text-xs sm:text-sm mt-1.5 block leading-normal text-gray-700 font-medium">
+                            <span className="text-sm sm:text-base mt-2 block leading-relaxed text-gray-800 font-medium">
                               {isPaid ? (
                                 payInfo?.metode_pembayaran === 'qris'
                                   ? 'Pembayaran QRIS telah diverifikasi secara otomatis & dana telah masuk ke e-wallet owner.'
