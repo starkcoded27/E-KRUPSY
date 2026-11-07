@@ -4,19 +4,16 @@ import React, { useState, useEffect } from 'react';
 import RoleGuard from '@/components/auth/role-guard';
 import { useAuth } from '@/context/auth-context';
 import StateAlert, { StateType } from '@/components/ui/state-alert';
-import { validateForm } from '@/lib/validation';
 import { 
   Flame, 
   Package, 
-  PlusCircle, 
   CheckCircle2, 
   Clock, 
   Layers, 
-  ArrowRight, 
   RefreshCw,
-  X,
-  AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  ShieldCheck,
+  Eye
 } from 'lucide-react';
 
 interface ProduksiItem {
@@ -69,14 +66,6 @@ export default function StaffPenggorengDashboardPage() {
     type: 'idle',
     message: null,
   });
-
-  // Modal Tambah Stok Bahan (UC-07 & UC-08)
-  const [showStockModal, setShowStockModal] = useState(false);
-  const [namaBahan, setNamaBahan] = useState('Kerupuk Mentah Kentang');
-  const [kategoriBahan, setKategoriBahan] = useState('Kerupuk Mentah');
-  const [satuanBahan, setSatuanBahan] = useState('Kg');
-  const [jumlahBahan, setJumlahBahan] = useState<number>(50);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -142,55 +131,6 @@ export default function StaffPenggorengDashboardPage() {
     }
   };
 
-  // Handler Tambah Stok Bahan (4 Validasi Input)
-  const handleAddStockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 4 JENIS VALIDASI INPUT
-    const validation = validateForm([
-      { field: 'nama_bahan', label: 'Nama Bahan Baku', value: namaBahan, required: true, dataType: 'string' },
-      { field: 'kategori', label: 'Kategori Bahan', value: kategoriBahan, required: true, domain: { allowedValues: ['Kerupuk Mentah', 'Bumbu', 'Plastik', 'Bahan Baku'] } },
-      { field: 'satuan', label: 'Satuan', value: satuanBahan, required: true, domain: { allowedValues: ['Kg', 'Pack', 'Liter', 'Pcs', 'Rol'] } },
-      { field: 'jumlah', label: 'Jumlah Tambahan Stok', value: jumlahBahan, required: true, dataType: 'integer', domain: { min: 1, max: 10000 } },
-    ]);
-
-    if (!validation.isValid) {
-      setValidationErrors(validation.errors);
-      setActionState({ type: 'error', message: validation.firstError });
-      return;
-    }
-
-    setValidationErrors({});
-    setActionState({ type: 'loading', message: 'Menyimpan data stok ke Supabase...' });
-
-    try {
-      const res = await fetch('/api/stok', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nama_bahan: namaBahan,
-          kategori: kategoriBahan,
-          satuan: satuanBahan,
-          jumlah: Number(jumlahBahan),
-          id_user: user?.id_user,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setActionState({ type: 'error', message: data.message || 'Gagal menyimpan stok bahan.' });
-        return;
-      }
-
-      setActionState({ type: 'success', message: data.message });
-      setShowStockModal(false);
-      await fetchData();
-    } catch {
-      setActionState({ type: 'error', message: 'Gagal menghubungi database stok.' });
-    }
-  };
-
   // Filter antrean penggorengan yang belum selesai
   const fryingTasks = productionList.filter((p) => p.status_produksi !== 'selesai');
 
@@ -202,34 +142,24 @@ export default function StaffPenggorengDashboardPage() {
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-400/20 text-orange-200 border border-orange-300/30 mb-3">
               <Flame className="w-3.5 h-3.5 text-orange-300" />
-              Divisi Operasional Penggorengan
+              Divisi Operasional Penggorengan Dadakan
             </span>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
-              Antrean Penggorengan & Stok Bahan
+              Antrean Penggorengan & Stok Wajan
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
-              Halo, <strong>{user?.nama}</strong>. Jalankan penggorengan pesanan kerupuk secara berurutan dan pantau stok bahan mentah di gudang wajan.
+              Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau ketersediaan stok bahan baku wajan dan memproses antrean penggorengan pesanan pelanggan.
             </p>
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => fetchData()}
               disabled={isLoading}
               className="inline-flex items-center gap-1.5 text-xs text-white font-bold bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl border border-white/20 transition"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              Muat Ulang Antrean
-            </button>
-            <button
-              onClick={() => {
-                setShowStockModal(true);
-                setActionState({ type: 'idle', message: null });
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-brand-darkmaroon font-bold bg-amber-300 hover:bg-amber-200 px-3.5 py-2 rounded-xl shadow-md transition"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              Input Stok Bahan Masuk
+              Muat Ulang Antrean & Stok
             </button>
           </div>
         </div>
@@ -394,165 +324,80 @@ export default function StaffPenggorengDashboardPage() {
           )}
         </div>
 
-        {/* MANAJEMEN STOK BAHAN BAKU & BUMBU (SDD UC-07 & UC-08) */}
+        {/* KETERSEDIAAN STOK BAHAN BAKU & BUMBU DI DAPUR (VIEW OUTPUT UNTUK PENGGORENG) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
             <div>
-              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-brand-maroon" />
-                Stok Bahan Baku & Bumbu di Database Supabase
-              </h2>
-              <p className="text-xs text-gray-500">
-                Pantau sisa stok dan catat bahan baru yang masuk ke gudang
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-brand-maroon" />
+                  Ketersediaan Stok Bahan Baku & Bumbu di Dapur (View Output)
+                </h2>
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                  Goreng Dadakan
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Output pemantauan ketersediaan bahan baku wajan (<strong>1 Bal = 5 Kg mentah</strong>). Pasokan bahan baku dikelola langsung oleh <strong>Owner</strong>.
               </p>
             </div>
-            <button
-              onClick={() => {
-                setShowStockModal(true);
-                setActionState({ type: 'idle', message: null });
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs shadow-sm transition w-fit"
-            >
-              <PlusCircle className="w-4 h-4" />
-              + Tambah Pasokan Masuk
-            </button>
+
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                Mode: Khusus Pantau Stok (View Only)
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded-xl border border-gray-200">
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-maroon" />
+                Input Pasokan: Khusus Owner
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {stockList
               .filter((s) => s.kategori !== 'Plastik')
-              .map((stok) => (
-                <div
-                  key={stok.id_stok}
-                  className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between"
-                >
-                  <div>
-                    <span className="font-semibold text-gray-900 text-xs block leading-tight">{stok.nama_bahan}</span>
-                    <span className="text-sm font-black text-brand-maroon mt-1 block">
-                      {stok.jumlah} {stok.satuan}
-                    </span>
-                    <span className="text-[10px] text-gray-400">Update: {stok.tanggal_update}</span>
+              .map((stok) => {
+                const isMentah = stok.kategori === 'Kerupuk Mentah';
+                const balEquivalent = isMentah ? Math.floor(stok.jumlah / 5) : null;
+
+                return (
+                  <div
+                    key={stok.id_stok}
+                    className="p-4 rounded-2xl border border-gray-200 bg-gray-50 flex flex-col justify-between hover:border-brand-maroon/30 transition shadow-sm"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-1 mb-1">
+                        <span className="font-bold text-gray-900 text-sm block leading-tight">{stok.nama_bahan}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          stok.jumlah < 20
+                            ? 'bg-red-100 text-red-700 border border-red-200'
+                            : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                        }`}>
+                          {stok.jumlah < 20 ? 'Menipis' : 'Cukup'}
+                        </span>
+                      </div>
+
+                      <span className="text-xl font-black text-brand-maroon mt-2 block">
+                        {stok.jumlah} {stok.satuan}
+                      </span>
+
+                      {isMentah && balEquivalent !== null && (
+                        <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-1 rounded-md border border-orange-200 block w-fit mt-2">
+                          Setara {balEquivalent} Bal di Katalog
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="pt-3 mt-3 border-t border-gray-200/70 flex items-center justify-between text-[11px] text-gray-500">
+                      <span>Kategori: {stok.kategori}</span>
+                      <span>Update: {stok.tanggal_update}</span>
+                    </div>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    stok.jumlah < 20
-                      ? 'bg-red-100 text-red-700 border border-red-200'
-                      : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                  }`}>
-                    {stok.jumlah < 20 ? 'Menipis' : 'Cukup'}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
-
-        {/* MODAL INPUT STOK MASUK DENGAN 4 JENIS VALIDASI (SDD UC-07 & UC-08) */}
-        {showStockModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 text-base">Input Stok Bahan Masuk</h3>
-                </div>
-                <button
-                  onClick={() => setShowStockModal(false)}
-                  className="p-1 rounded-xl text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddStockSubmit} className="space-y-4">
-                {/* 1. Nama Bahan (Existence Check) */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Nama Bahan Baku <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={namaBahan}
-                    onChange={(e) => {
-                      setNamaBahan(e.target.value);
-                      if (e.target.value.includes('Bumbu')) {
-                        setKategoriBahan('Bumbu');
-                      } else if (e.target.value.includes('Minyak')) {
-                        setKategoriBahan('Bahan Baku');
-                        setSatuanBahan('Liter');
-                      } else {
-                        setKategoriBahan('Kerupuk Mentah');
-                        setSatuanBahan('Kg');
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                  >
-                    <option value="Kerupuk Mentah Kentang">Kerupuk Mentah Kentang</option>
-                    <option value="Kerupuk Mentah Jengkol">Kerupuk Mentah Jengkol</option>
-                    <option value="Kerupuk Mentah Bawang">Kerupuk Mentah Bawang</option>
-                    <option value="Kerupuk Mentah Rafael">Kerupuk Mentah Rafael</option>
-                    <option value="Bumbu Rasa Original">Bumbu Rasa Original</option>
-                    <option value="Bumbu Balado Super">Bumbu Balado Super</option>
-                    <option value="Bumbu Pedas Manis">Bumbu Pedas Manis</option>
-                    <option value="Minyak Goreng Nabati">Minyak Goreng Nabati</option>
-                  </select>
-                </div>
-
-                {/* 2. Jumlah & Satuan Grid (Data Type & Domain Check) */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
-                      Jumlah Masuk <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10000"
-                      value={jumlahBahan}
-                      onChange={(e) => setJumlahBahan(parseInt(e.target.value) || 0)}
-                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                      required
-                    />
-                    {validationErrors.jumlah && (
-                      <p className="text-[11px] text-red-600 mt-1">{validationErrors.jumlah}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
-                      Satuan Ukur <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={satuanBahan}
-                      onChange={(e) => setSatuanBahan(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                    >
-                      <option value="Kg">Kg (Kilogram)</option>
-                      <option value="Liter">Liter</option>
-                      <option value="Pack">Pack</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowStockModal(false)}
-                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={actionState.type === 'loading'}
-                    className="py-3 px-4 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
-                  >
-                    {actionState.type === 'loading' ? 'Menyimpan...' : 'Simpan ke Database'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </RoleGuard>
   );

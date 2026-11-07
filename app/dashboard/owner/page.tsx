@@ -33,6 +33,7 @@ import {
   Building2,
   Image as ImageIcon,
   Receipt,
+  Layers,
   Eye,
   ExternalLink,
   AlertTriangle,
@@ -150,6 +151,10 @@ export default function OwnerDashboardPage() {
   const [stokProduk, setStokProduk] = useState<number>(25);
   const [deskripsiProduk, setDeskripsiProduk] = useState('');
   const [productErrors, setProductErrors] = useState<Record<string, string>>({});
+
+  // Modal Restock Pasokan Supplier untuk Produk Katalog (Khusus Owner)
+  const [selectedProductToRestock, setSelectedProductToRestock] = useState<ProdukCatalogItem | null>(null);
+  const [restockBalQty, setRestockBalQty] = useState<number>(10);
 
   const fetchLaporan = async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -281,6 +286,47 @@ export default function OwnerDashboardPage() {
       await fetchLaporan();
     } catch {
       setActionState({ type: 'error', message: 'Kendala jaringan saat menyimpan produk.' });
+    }
+  };
+
+  // Restock Pasokan Produk Masuk dari Supplier (Khusus Owner)
+  const handleRestockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductToRestock) return;
+
+    if (restockBalQty <= 0) {
+      setActionState({ type: 'error', message: 'Jumlah tambahan stok minimal 1 Bal.' });
+      return;
+    }
+
+    setActionState({ type: 'loading', message: `Menambahkan pasokan +${restockBalQty} Bal ke katalog & dapur wajan...` });
+
+    try {
+      const res = await fetch('/api/produk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id_produk: selectedProductToRestock.id_produk,
+          additional_stok: Number(restockBalQty),
+        }),
+      });
+
+      const resData = await res.json();
+
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal menambahkan restock produk.' });
+        return;
+      }
+
+      setActionState({
+        type: 'success',
+        message: resData.message,
+      });
+
+      setSelectedProductToRestock(null);
+      await fetchLaporan();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat memperbarui stok produk.' });
     }
   };
 
@@ -948,9 +994,14 @@ export default function OwnerDashboardPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl">
                   <div className="flex items-center gap-2.5 text-xs text-amber-900">
                     <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
-                    <p className="leading-relaxed">
-                      <strong>Validasi Anti-Duplikasi:</strong> Sistem mencegah penambahan katalog dengan nama yang sama (misal <strong>Makaroni</strong>). Setiap produk baru wajib memiliki nama yang unik.
-                    </p>
+                    <div className="leading-relaxed">
+                      <p>
+                        <strong>Sistem Produksi Goreng Dadakan (Make-To-Order):</strong> Stok kerupuk katalog dihitung langsung dari pasokan bahan mentah supplier di dapur penggorengan (<strong>1 Bal = 5 Kg kerupuk mentah</strong>).
+                      </p>
+                      <p className="text-[11px] text-amber-800/80 mt-0.5">
+                        Saat pelanggan memesan, stok mentah di dapur otomatis terpotong. Nama produk bersifat unik (tidak dapat diduplikasi).
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={() => {
@@ -972,9 +1023,10 @@ export default function OwnerDashboardPage() {
                         <th className="py-3 px-3">Nama Produk Kerupuk</th>
                         <th className="py-3 px-3">Satuan</th>
                         <th className="py-3 px-3">Harga Jual</th>
-                        <th className="py-3 px-3">Stok Siap Jual</th>
+                        <th className="py-3 px-3">Kapasitas Stok Jual</th>
                         <th className="py-3 px-3">Status Stok</th>
                         <th className="py-3 px-3">Keterangan</th>
+                        <th className="py-3 px-3 text-right">Aksi Restock</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -1000,8 +1052,11 @@ export default function OwnerDashboardPage() {
                             <td className="py-3 px-3 font-mono font-bold text-gray-900">
                               Rp {Number(prod.harga).toLocaleString('id-ID')}
                             </td>
-                            <td className="py-3 px-3 font-semibold text-gray-800">
-                              {prod.stok} {prod.satuan}
+                            <td className="py-3 px-3">
+                              <span className="font-bold text-gray-900 block">{prod.stok} {prod.satuan}</span>
+                              <span className="text-[10px] text-gray-400 font-mono block">
+                                (~{prod.stok * 5} Kg bahan mentah)
+                              </span>
                             </td>
                             <td className="py-3 px-3">
                               {prod.stok > 10 ? (
@@ -1021,11 +1076,63 @@ export default function OwnerDashboardPage() {
                             <td className="py-3 px-3 text-gray-500 max-w-xs truncate">
                               {prod.deskripsi || '-'}
                             </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedProductToRestock(prod);
+                                  setRestockBalQty(10);
+                                  setActionState({ type: 'idle', message: null });
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95"
+                              >
+                                <PlusCircle className="w-3.5 h-3.5" />
+                                + Restock
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
+                </div>
+
+                {/* SINKRONISASI STOK BAHAN MENTAH DI DAPUR PENGGORENGAN (OUTPUT SYNC) */}
+                <div className="mt-6 pt-5 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-900 flex items-center gap-1.5 uppercase tracking-wider">
+                        <Layers className="w-4 h-4 text-orange-600" />
+                        Monitoring Bahan Mentah Dapur Penggorengan (1 Bal = 5 Kg)
+                      </h3>
+                      <p className="text-[11px] text-gray-500">
+                        Pasokan supplier bertambah saat Owner restock, dan berkurang otomatis sesuai pesanan kerupuk goreng dadakan pelanggan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {(laporan.stockList || [])
+                      .filter((s) => s.kategori !== 'Plastik')
+                      .map((stok) => {
+                        const isMentah = stok.kategori === 'Kerupuk Mentah';
+                        const balEquivalent = isMentah ? Math.floor(stok.jumlah / 5) : null;
+                        return (
+                          <div key={stok.id_stok} className="p-3 bg-gray-50 border border-gray-200 rounded-2xl hover:border-brand-maroon/30 transition">
+                            <span className="text-xs font-bold text-gray-800 block truncate">{stok.nama_bahan}</span>
+                            <span className="text-base font-black text-brand-maroon mt-1 block">
+                              {stok.jumlah} {stok.satuan}
+                            </span>
+                            {isMentah && balEquivalent !== null && (
+                              <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 block w-fit mt-1">
+                                Setara {balEquivalent} Bal
+                              </span>
+                            )}
+                            <span className="text-[10px] text-gray-400 block mt-1">Update: {stok.tanggal_update}</span>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
               </div>
             )
@@ -1600,6 +1707,87 @@ export default function OwnerDashboardPage() {
                     className="py-3 px-4 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
                   >
                     {actionState.type === 'loading' ? 'Menyimpan...' : 'Simpan Produk'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL RESTOCK PASOKAN SUPPLIER OLEH OWNER */}
+        {selectedProductToRestock && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                    <PlusCircle className="w-5 h-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Restock Pasokan Supplier</h3>
+                    <p className="text-[11px] text-gray-500">Input pasokan kerupuk masuk dari supplier (Khusus Owner)</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedProductToRestock(null)}
+                  className="p-1 rounded-xl text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleRestockSubmit} className="space-y-4">
+                {/* Info Produk Saat Ini */}
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl text-xs space-y-1.5 text-amber-950">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Nama Produk:</span>
+                    <span className="font-bold text-gray-900">{selectedProductToRestock.nama_produk}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Stok Saat Ini:</span>
+                    <span className="font-mono font-bold text-brand-maroon">{selectedProductToRestock.stok} {selectedProductToRestock.satuan} (~{selectedProductToRestock.stok * 5} Kg mentah)</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1 border-t border-amber-200/60">
+                    <span className="text-gray-500">Estimasi Setelah Restock:</span>
+                    <span className="font-mono font-black text-emerald-700">
+                      {selectedProductToRestock.stok + Number(restockBalQty || 0)} {selectedProductToRestock.satuan} (~{(selectedProductToRestock.stok + Number(restockBalQty || 0)) * 5} Kg mentah)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Input Tambahan Stok Bal */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Jumlah Pasokan Masuk ({selectedProductToRestock.satuan}) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5000"
+                    value={restockBalQty}
+                    onChange={(e) => setRestockBalQty(parseInt(e.target.value) || 0)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                    required
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1.5">
+                    ⚡ <strong>Otomatisasi Konversi:</strong> Tambahan {restockBalQty} Bal akan otomatis menambahkan pasokan <strong>+{restockBalQty * 5} Kg</strong> bahan mentah di dapur wajan staf penggorengan dadakan.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProductToRestock(null)}
+                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionState.type === 'loading' || restockBalQty <= 0}
+                    className="py-3 px-4 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
+                  >
+                    {actionState.type === 'loading' ? 'Menyimpan...' : 'Konfirmasi Restock'}
                   </button>
                 </div>
               </form>

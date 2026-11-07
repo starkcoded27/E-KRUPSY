@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
+import { deductRawMaterialOnOrder } from '@/lib/stock-sync';
+import { getHargaBumbu, getHargaPlastik } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
         label: 'Ukuran Kemasan Plastik', 
         value: ukuran_plastik, 
         required: true, 
-        domain: { allowedValues: ['1/2 kg', '1x25 kg', '30x45 kg'] } 
+        domain: { allowedValues: ['1/2 kg', '1 1/2 kg', '1x25 kg', '11x25 kg', '30x45 kg', '12x22 kg', '12x23 kg', '12x25 kg'] } 
       },
       { 
         field: 'metode_pembayaran', 
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Produk yang dipilih tidak ditemukan di database.' }, { status: 404 });
     }
 
-    // Domain Check: Cek ketersediaan stok
+    // Domain Check: Cek ketersediaan stok produk
     const qty = Number(jumlah);
     if (prodData.stok < qty) {
       return NextResponse.json({
@@ -115,7 +117,12 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const totalHarga = Number(prodData.harga) * qty;
+    // Kalkulasi total harga gabungan: (Harga Kerupuk + Tambahan Bumbu + Tambahan Plastik) * Qty
+    const hargaKerupukSatuan = Number(prodData.harga) || 0;
+    const hargaBumbu = getHargaBumbu(varian_rasa);
+    const hargaPlastik = getHargaPlastik(ukuran_plastik);
+    const hargaPerBal = hargaKerupukSatuan + hargaBumbu + hargaPlastik;
+    const totalHarga = hargaPerBal * qty;
 
     // 1. Simpan ke tabel pesanan
     const { data: orderData, error: orderErr } = await supabase
@@ -167,11 +174,14 @@ export async function POST(req: NextRequest) {
       console.error('Error insert antrean produksi:', prodQueueErr);
     }
 
-    // 4. Kurangi stok produk di database
+    // 4. Kurangi stok produk dan sinkronkan stok bahan mentah di dapur penggorengan dadakan
     await supabase
       .from('produk')
       .update({ stok: Math.max(0, prodData.stok - qty) })
       .eq('id_produk', Number(id_produk));
+
+    // Otomatis potong stok kerupuk mentah (5 Kg per 1 Bal goreng dadakan)
+    await deductRawMaterialOnOrder(supabase, prodData.nama_produk, qty);
 
     return NextResponse.json({
       success: true,

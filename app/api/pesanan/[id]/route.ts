@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
+import { refundRawMaterialOnCancel } from '@/lib/stock-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,12 +47,14 @@ export async function PATCH(
         .update({ status_pesanan: 'dibatalkan' })
         .eq('id_pesanan', orderId);
 
-      // Kembalikan stok produk
+      // Kembalikan stok produk di katalog dan kembalikan stok bahan mentah di dapur
       if (order.id_produk && order.produk) {
         await supabase
           .from('produk')
           .update({ stok: order.produk.stok + order.jumlah })
           .eq('id_produk', order.id_produk);
+
+        await refundRawMaterialOnCancel(supabase, order.produk.nama_produk, order.jumlah);
       }
 
       return NextResponse.json({
