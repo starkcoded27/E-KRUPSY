@@ -103,7 +103,7 @@ export default function PelangganDashboardPage() {
   // State Modal Upload Bukti Transfer Bank
   const [uploadTransferOrder, setUploadTransferOrder] = useState<Pesanan | null>(null);
   const [transferImage, setTransferImage] = useState<string | null>(null);
-  const [transferBank, setTransferBank] = useState<string>('Bank BCA (139-082-9912 a/n Bapak Diansyah)');
+  const [transferBank, setTransferBank] = useState<string>('Bank BCA (7405136830 a/n Anita Nurhayati)');
   const [transferCatatan, setTransferCatatan] = useState<string>('');
   const [isUploadingTransfer, setIsUploadingTransfer] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
@@ -748,7 +748,7 @@ export default function PelangganDashboardPage() {
                               ) : payInfo?.metode_pembayaran === 'transfer' ? (
                                 payInfo?.bukti_transfer
                                   ? 'Foto bukti transfer Anda telah tersimpan dan sedang diperiksa oleh Owner.'
-                                  : 'Silakan transfer ke nomor rekening pabrik (BCA/Mandiri/BRI) lalu unggah foto screenshot bukti transfer.'
+                                  : 'Silakan transfer ke nomor rekening pabrik (BCA/Mandiri/BJB) lalu unggah foto screenshot bukti transfer.'
                               ) : (
                                 'Silakan selesaikan pembayaran tunai kepada Owner/Kasir saat mengambil pesanan di pabrik (COD).'
                               )}
@@ -1476,9 +1476,9 @@ export default function PelangganDashboardPage() {
                     onChange={(e) => setTransferBank(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
                   >
-                    <option value="Bank BCA (139-082-9912 a/n Bapak Diansyah)">Bank BCA &bull; 139-082-9912 (Bapak Diansyah)</option>
-                    <option value="Bank Mandiri (182-000-482-991 a/n Pabrik Kerupuk Diansyah)">Bank Mandiri &bull; 182-000-482-991 (Pabrik Kerupuk Diansyah)</option>
-                    <option value="Bank BJB (0139-544-684-100 a/n Diansyah)">Bank BJB &bull; 0139-544-684-100 (Diansyah)</option>
+                    <option value="Bank BCA (7405136830 a/n Anita Nurhayati)">Bank BCA &bull; 7405136830 (a/n Anita Nurhayati)</option>
+                    <option value="Bank Mandiri (1320023382287 a/n Diansiah Hidayat)">Bank Mandiri &bull; 1320023382287 (a/n Diansiah Hidayat)</option>
+                    <option value="Bank BJB (0139544684100 a/n Diansiah Hidayat)">Bank BJB &bull; 0139544684100 (a/n Diansiah Hidayat)</option>
                   </select>
                 </div>
 
