@@ -3044,11 +3044,11 @@ export default function PelangganDashboardPage() {
 
                   >
 
-                    <option value="Bank BCA (139-082-9912 a/n Bapak Diansyah)">Bank BCA &bull; 139-082-9912 (Bapak Diansyah)</option>
+                    <option value="Bank BCA (7405136830 a/n Anita Nurhayati)">Bank BCA &bull; 7405136830 (a/n Anita Nurhayati)</option>
 
-                    <option value="Bank Mandiri (182-000-482-991 a/n Pabrik Kerupuk Diansyah)">Bank Mandiri &bull; 182-000-482-991 (Pabrik Kerupuk Diansyah)</option>
+                    <option value="Bank Mandiri (1320023382287 a/n Diansiah Hidayat)">Bank Mandiri &bull; 1320023382287 (a/n Diansiah Hidayat)</option>
 
-                    <option value="Bank BJB (0139-544-684-100 a/n Diansyah)">Bank BJB &bull; 0139-544-684-100 (Diansyah)</option>
+                    <option value="Bank BJB (0139544684100 a/n Diansiah Hidayat)">Bank BJB &bull; 0139544684100 (a/n Diansiah Hidayat)</option>
 
                   </select>
 
