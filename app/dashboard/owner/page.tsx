@@ -30,17 +30,28 @@ import {
   Layers,
   Eye,
   AlertTriangle,
+<<<<<<< HEAD
   Package,
   Edit2,
   Trash2,
   PackagePlus,
   FileText
+=======
+  Calendar,
+  CalendarDays,
+  Trash2,
+  Upload,
+  Edit3,
+  Pencil,
+  Package
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
 } from 'lucide-react';
 import { ChartData } from '@/lib/chart-data';
 
 interface OrderItem {
   id_pesanan: number;
   tanggal_pesanan: string;
+  created_at?: string;
   jumlah: number;
   total_harga: number;
   status_pesanan: string;
@@ -90,6 +101,7 @@ interface ProdukCatalogItem {
   harga: number;
   stok: number;
   deskripsi?: string;
+  gambar_url?: string;
 }
 
 interface StokBahanItem {
@@ -156,6 +168,174 @@ export default function OwnerDashboardPage() {
   const [stokProduk, setStokProduk] = useState<number>(25);
   const [deskripsiProduk, setDeskripsiProduk] = useState('');
   const [productErrors, setProductErrors] = useState<Record<string, string>>({});
+  // Modal Edit Produk & Ganti Foto (CRUD Update)
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [selectedProductToEdit, setSelectedProductToEdit] = useState<ProdukCatalogItem | null>(null);
+  const [editNama, setEditNama] = useState('');
+  const [editSatuan, setEditSatuan] = useState('Bal');
+  const [editHarga, setEditHarga] = useState<number>(160000);
+  const [editDeskripsi, setEditDeskripsi] = useState('');
+  const [editGambar, setEditGambar] = useState('');
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+  // Handler Upload Foto untuk Form Edit Produk
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setActionState({ type: 'error', message: 'File harus berupa gambar (JPG, PNG, JPEG, WebP).' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setEditGambar(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Submit Edit Produk (CRUD Update)
+  const handleEditProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductToEdit) return;
+
+    setActionState({ type: 'loading', message: 'Memperbarui data dan foto produk ke database...' });
+
+    try {
+      const res = await fetch('/api/produk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'edit',
+          id_produk: selectedProductToEdit.id_produk,
+          nama_produk: editNama.trim(),
+          satuan: editSatuan,
+          harga: Number(editHarga),
+          deskripsi: editDeskripsi,
+          gambar_url: editGambar || null,
+        }),
+      });
+
+      const resData = await res.json();
+
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal memperbarui produk.' });
+        return;
+      }
+
+      setActionState({
+        type: 'success',
+        message: `Produk "${editNama}" berhasil diperbarui!`,
+      });
+
+      setShowEditProductModal(false);
+      setSelectedProductToEdit(null);
+      await fetchLaporan();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat memperbarui produk.' });
+    }
+  };
+
+  // Submit Hapus Produk (CRUD Delete)
+  const handleDeleteProduct = async (prod: ProdukCatalogItem) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus produk "${prod.nama_produk}" dari katalog pabrik?`)) {
+      return;
+    }
+
+    setActionState({ type: 'loading', message: `Menghapus produk "${prod.nama_produk}"...` });
+
+    try {
+      const res = await fetch(`/api/produk?id=${prod.id_produk}`, {
+        method: 'DELETE',
+      });
+
+      const resData = await res.json();
+
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal menghapus produk.' });
+        return;
+      }
+
+      setActionState({
+        type: 'success',
+        message: `Produk "${prod.nama_produk}" berhasil dihapus dari katalog.`,
+      });
+
+      await fetchLaporan();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat menghapus produk.' });
+    }
+  };
+
+  const [gambarProduk, setGambarProduk] = useState('');
+
+  // Periode Cetak Laporan Terpisah (Harian / Bulanan / Tahunan)
+  const [printPeriod, setPrintPeriod] = useState<'harian' | 'bulanan' | 'tahunan'>('harian');
+  const [printDate, setPrintDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [printMonth, setPrintMonth] = useState(() => new Date().getMonth() + 1);
+  const [printYear, setPrintYear] = useState(() => new Date().getFullYear());
+
+  // Handler Upload Foto Produk (dengan kompresi otomatis)
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setActionState({ type: 'error', message: 'File harus berupa gambar (JPG, PNG, JPEG, WebP).' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setGambarProduk(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Modal Restock Produk Bal
   const [selectedProductToRestock, setSelectedProductToRestock] = useState<ProdukCatalogItem | null>(null);
@@ -275,6 +455,7 @@ export default function OwnerDashboardPage() {
           harga: Number(hargaProduk),
           stok: Number(stokProduk),
           deskripsi: deskripsiProduk,
+          gambar_url: gambarProduk || null,
         }),
       });
 
@@ -294,7 +475,12 @@ export default function OwnerDashboardPage() {
       setShowProductModal(false);
       setNamaProduk('');
       setDeskripsiProduk('');
+      setGambarProduk('');
+      setViewSection('katalog');
       await fetchLaporan();
+      setTimeout(() => {
+        document.getElementById('section-manajemen-data')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch {
       setActionState({ type: 'error', message: 'Kendala jaringan saat menyimpan produk.' });
     }
@@ -503,6 +689,7 @@ export default function OwnerDashboardPage() {
 
   return (
     <RoleGuard allowedRoles={['owner']} pageTitle="Dashboard Owner">
+<<<<<<< HEAD
       <div className="space-y-6">
         {/* Banner Utama */}
         <div className="bg-gradient-to-r from-amber-800 via-brand-maroon to-brand-darkmaroon text-white rounded-2xl p-6 sm:p-7 shadow-md relative overflow-hidden">
@@ -553,6 +740,67 @@ export default function OwnerDashboardPage() {
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
+=======
+      <div className={`space-y-6 ${selectedOrderToPrint ? 'print:hidden' : ''}`}>
+        {/* Banner Eksekutif Owner */}
+        <div className="bg-gradient-to-r from-amber-800 via-brand-maroon to-brand-darkmaroon text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+          <div className="relative z-10 max-w-3xl">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-400/20 text-amber-200 border border-amber-300/30 mb-3">
+              <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
+              Pusat Kendali Eksekutif Pabrik Kerupuk Diansyah
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
+              Laporan Harian, Transaksi & Keuangan
+            </h1>
+            <p className="mt-2 text-xs sm:text-sm text-amber-100/80 leading-relaxed">
+              Selamat datang, <strong>{user?.nama}</strong>. Data berikut terhubung secara langsung (*real-time*) dengan database Supabase.
+            </p>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-2 text-xs print:hidden">
+            <button
+              onClick={() => {
+                setPrintPeriod('harian');
+                setShowFinancialReportModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-brand-darkmaroon font-bold transition shadow-sm"
+            >
+              <Printer className="w-4 h-4" />
+              Cetak Laporan (Harian / Bulanan / Tahunan)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewSection('katalog');
+                document.getElementById('section-manajemen-data')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold transition shadow-sm ${
+                viewSection === 'katalog'
+                  ? 'bg-amber-400 text-brand-darkmaroon'
+                  : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+              }`}
+            >
+              <Package className="w-4 h-4 text-amber-300" />
+              Kelola List Produk ({laporan?.produkList?.length || 0})
+            </button>
+            <button
+              onClick={() => {
+                setShowProductModal(true);
+                setActionState({ type: 'idle', message: null });
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition border border-white/20"
+            >
+              <PlusCircle className="w-4 h-4 text-amber-300" />
+              + Tambah Produk Baru
+            </button>
+            <button
+              onClick={() => fetchLaporan()}
+              disabled={isLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
           </div>
         </div>
 
@@ -663,6 +911,7 @@ export default function OwnerDashboardPage() {
             <span>Grafik & Keuangan</span>
           </button>
 
+<<<<<<< HEAD
           <button
             type="button"
             onClick={() => setActiveTab('transaksi')}
@@ -675,6 +924,87 @@ export default function OwnerDashboardPage() {
             <CreditCard className="w-3.5 h-3.5" />
             <span>Transaksi ({laporan?.orders?.length || 0})</span>
           </button>
+=======
+            {/* Toggle 4 Periode: Hari, Minggu, Bulan, Tahun */}
+            <div className="flex flex-wrap items-center gap-2 self-start lg:self-center">
+              <button
+                type="button"
+                onClick={() => {
+                  if (chartPeriod === 'bulanan') setPrintPeriod('bulanan');
+                  else if (chartPeriod === 'tahunan') setPrintPeriod('tahunan');
+                  else setPrintPeriod('harian');
+                  setShowFinancialReportModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-brand-darkmaroon font-bold text-xs shadow-sm transition active:scale-95"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Cetak Laporan {chartPeriod === 'bulanan' ? 'Bulanan' : chartPeriod === 'tahunan' ? 'Tahunan' : 'Harian'}</span>
+              </button>
+              <div className="flex items-center p-1.5 bg-gray-100/90 rounded-2xl gap-1 border border-gray-200/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setChartPeriod('harian');
+                  setHoveredBarIndex(null);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  chartPeriod === 'harian'
+                    ? 'bg-brand-maroon text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Harian (7 Hari)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChartPeriod('mingguan');
+                  setHoveredBarIndex(null);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  chartPeriod === 'mingguan'
+                    ? 'bg-brand-maroon text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                }`}
+              >
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span>Mingguan (5 Mgg)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChartPeriod('bulanan');
+                  setHoveredBarIndex(null);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  chartPeriod === 'bulanan'
+                    ? 'bg-brand-maroon text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Bulanan (12 Bln)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChartPeriod('tahunan');
+                  setHoveredBarIndex(null);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  chartPeriod === 'tahunan'
+                    ? 'bg-brand-maroon text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Tahunan</span>
+              </button>
+            </div>
+          </div>
+        </div>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
 
           <button
             type="button"
@@ -719,6 +1049,7 @@ export default function OwnerDashboardPage() {
           </button>
         </div>
 
+<<<<<<< HEAD
         {/* ========================================================================= */}
         {/* TAB 1: GRAFIK & KEUANGAN */}
         {/* ========================================================================= */}
@@ -730,6 +1061,151 @@ export default function OwnerDashboardPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-100 text-brand-maroon flex items-center justify-center font-bold">
                     <BarChart3 className="w-5 h-5" />
+=======
+        {/* TABEL MANAJEMEN DATA (TRANSAKSI, KATALOG PRODUK CRUD, PELANGGAN) */}
+        <div id="section-manajemen-data" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                {viewSection === 'transaksi' ? (
+                  <>
+                    <CreditCard className="w-5 h-5 text-brand-maroon" />
+                    Daftar Transaksi Pemesanan & Konfirmasi Pembayaran
+                  </>
+                ) : viewSection === 'pelanggan' ? (
+                  <>
+                    <Users className="w-5 h-5 text-brand-maroon" />
+                    Data Master Pelanggan Terdaftar
+                  </>
+                ) : (
+                  <>
+                    <Package className="w-5 h-5 text-brand-maroon" />
+                    Katalog Master Produk Kerupuk Pabrik
+                  </>
+                )}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {viewSection === 'transaksi'
+                  ? 'Owner dapat memvalidasi penerimaan kas tunai (Cash on Delivery) dan memantau status pesanan'
+                  : viewSection === 'pelanggan'
+                  ? 'Daftar seluruh akun pelanggan yang terdaftar di basis data Pabrik Kerupuk Diansyah'
+                  : 'Daftar seluruh katalog varian kerupuk. Nama produk bersifat unik dan tidak dapat diduplikasi'}
+              </p>
+            </div>
+
+            {/* Toggle Tabs Transaksi vs Pelanggan vs Katalog Produk */}
+            <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setViewSection('transaksi')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  viewSection === 'transaksi'
+                    ? 'bg-white text-brand-maroon shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Transaksi ({laporan?.orders?.length || 0})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewSection('pelanggan')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  viewSection === 'pelanggan'
+                    ? 'bg-white text-brand-maroon shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Pelanggan ({laporan?.pelangganList?.length || 0})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewSection('katalog')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  viewSection === 'katalog'
+                    ? 'bg-white text-brand-maroon shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span>Katalog Produk ({laporan?.produkList?.length || 0})</span>
+              </button>
+            </div>
+          </div>
+
+          {viewSection === 'pelanggan' ? (
+            !laporan?.pelangganList || laporan.pelangganList.length === 0 ? (
+              <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100">
+                <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-gray-600">Belum ada pelanggan terdaftar di Supabase.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-gray-50 text-gray-500 font-semibold uppercase tracking-wider border-y border-gray-100">
+                    <tr>
+                      <th className="py-3 px-3">ID</th>
+                      <th className="py-3 px-3">Nama Lengkap</th>
+                      <th className="py-3 px-3">No. Telepon / WA</th>
+                      <th className="py-3 px-3">Alamat</th>
+                      <th className="py-3 px-3">Email</th>
+                      <th className="py-3 px-3">Jenis Kelamin</th>
+                      <th className="py-3 px-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {laporan.pelangganList.map((pel) => {
+                      const isNew = pel.id_pelanggan >= 7 || pel.nama_lengkap.toLowerCase().includes('hanifa');
+                      return (
+                        <tr key={pel.id_pelanggan} className="hover:bg-gray-50/70">
+                          <td className="py-3 px-3 font-mono font-bold text-gray-800">#{pel.id_pelanggan}</td>
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-gray-900 block">{pel.nama_lengkap}</span>
+                            <span className="text-[10px] text-gray-400">ID User: #{pel.id_user}</span>
+                          </td>
+                          <td className="py-3 px-3 font-mono font-medium text-gray-700">{pel.no_telp || '-'}</td>
+                          <td className="py-3 px-3 text-gray-600 max-w-xs">{pel.alamat || '-'}</td>
+                          <td className="py-3 px-3 text-gray-600">{pel.email || '-'}</td>
+                          <td className="py-3 px-3 text-gray-600">{pel.jenis_kelamin || 'Perempuan'}</td>
+                          <td className="py-3 px-3">
+                            {isNew ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                Pelanggan Baru
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                Terdaftar
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : viewSection === 'katalog' ? (
+            !laporan?.produkList || laporan.produkList.length === 0 ? (
+              <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100">
+                <Package className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-gray-600">Belum ada produk terdaftar di katalog Supabase.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl">
+                  <div className="flex items-center gap-2.5 text-xs text-amber-900">
+                    <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                    <div className="leading-relaxed">
+                      <p>
+                        <strong>Sistem Produksi Goreng Dadakan (Make-To-Order):</strong> Stok kerupuk katalog dihitung langsung dari pasokan bahan mentah supplier di dapur penggorengan (<strong>1 Bal = 5 Kg kerupuk mentah</strong>).
+                      </p>
+                      <p className="text-[11px] text-amber-800/80 mt-0.5">
+                        Saat pelanggan memesan, stok mentah di dapur otomatis terpotong. Nama produk bersifat unik (tidak dapat diduplikasi).
+                      </p>
+                    </div>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-gray-900">
@@ -991,11 +1467,22 @@ export default function OwnerDashboardPage() {
                   <table className="w-full text-xs text-left">
                     <thead className="bg-gray-50 text-gray-600 font-bold uppercase tracking-wider border-y border-gray-100">
                       <tr>
+<<<<<<< HEAD
                         <th className="py-2.5 px-3">No</th>
                         <th className="py-2.5 px-3">Nama Varian Kerupuk</th>
                         <th className="py-2.5 px-3 text-center">Volume Terjual</th>
                         <th className="py-2.5 px-3 text-right">Kontribusi Omset (Rp)</th>
                         <th className="py-2.5 px-3 text-center">Persentase</th>
+=======
+                        <th className="py-3 px-3">ID</th>
+                        <th className="py-3 px-3">Nama Produk Kerupuk</th>
+                        <th className="py-3 px-3">Satuan</th>
+                        <th className="py-3 px-3">Harga Jual</th>
+                        <th className="py-3 px-3">Kapasitas Stok Jual</th>
+                        <th className="py-3 px-3">Status Stok</th>
+                        <th className="py-3 px-3">Keterangan</th>
+                        <th className="py-3 px-3 text-right min-w-[200px]">Aksi Kelola (CRUD)</th>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -1005,11 +1492,43 @@ export default function OwnerDashboardPage() {
                           : 0;
 
                         return (
+<<<<<<< HEAD
                           <tr key={idx} className="hover:bg-gray-50/70">
                             <td className="py-2.5 px-3 font-mono text-gray-500">{idx + 1}</td>
                             <td className="py-2.5 px-3 font-bold text-gray-900">{p.nama}</td>
                             <td className="py-2.5 px-3 text-center font-medium text-gray-700">
                               {p.jumlah} {p.satuan}
+=======
+                          <tr key={prod.id_produk} className={`hover:bg-gray-50/70 ${isMakaroni ? 'bg-amber-50/30' : ''}`}>
+                            <td className="py-3 px-3 font-mono font-bold text-gray-800">#{prod.id_produk}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-3">
+                                {prod.gambar_url ? (
+                                  <img
+                                    src={prod.gambar_url}
+                                    alt={prod.nama_produk}
+                                    className="w-12 h-12 rounded-xl object-cover border border-gray-200 shadow-sm shrink-0"
+                                  />
+                                ) : (
+                                  <span className="w-12 h-12 rounded-xl bg-brand-50 text-brand-maroon flex items-center justify-center font-bold text-base shrink-0 border border-brand-100 shadow-inner">
+                                    🍘
+                                  </span>
+                                )}
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-gray-900 text-sm">{prod.nama_produk}</span>
+                                    {isMakaroni && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                        Katalog Khusus
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-400 max-w-xs truncate mt-0.5">
+                                    {prod.deskripsi || 'Tidak ada deskripsi'}
+                                  </p>
+                                </div>
+                              </div>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono font-bold text-brand-maroon">
                               Rp {Number(p.total).toLocaleString('id-ID')}
@@ -1019,12 +1538,118 @@ export default function OwnerDashboardPage() {
                                 {percentage}%
                               </span>
                             </td>
+<<<<<<< HEAD
+=======
+                            <td className="py-3 px-3">
+                              {prod.stok > 10 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  ✓ Stok Tersedia
+                                </span>
+                              ) : prod.stok > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                  ⚠ Stok Menipis
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                  ✕ Stok Habis
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-gray-500 max-w-xs truncate">
+                              {prod.deskripsi || '-'}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedProductToRestock(prod);
+                                    setRestockBalQty(10);
+                                    setActionState({ type: 'idle', message: null });
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95"
+                                  title="Restock Pasokan Supplier"
+                                >
+                                  <PlusCircle className="w-3.5 h-3.5" />
+                                  <span>+ Restock</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedProductToEdit(prod);
+                                    setEditNama(prod.nama_produk);
+                                    setEditSatuan(prod.satuan);
+                                    setEditHarga(prod.harga);
+                                    setEditDeskripsi(prod.deskripsi || '');
+                                    setEditGambar(prod.gambar_url || '');
+                                    setEditErrors({});
+                                    setShowEditProductModal(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95"
+                                  title="Edit Produk & Ganti Foto"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteProduct(prod)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95"
+                                  title="Hapus Produk dari Katalog"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Hapus</span>
+                                </button>
+                              </div>
+                            </td>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
+<<<<<<< HEAD
+=======
+
+                {/* SINKRONISASI STOK BAHAN MENTAH DI DAPUR PENGGORENGAN (OUTPUT SYNC) */}
+                <div className="mt-6 pt-5 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-900 flex items-center gap-1.5 uppercase tracking-wider">
+                        <Layers className="w-4 h-4 text-orange-600" />
+                        Monitoring Bahan Mentah Dapur Penggorengan (1 Bal = 5 Kg)
+                      </h3>
+                      <p className="text-[11px] text-gray-500">
+                        Pasokan supplier bertambah saat Owner restock, dan berkurang otomatis sesuai pesanan kerupuk goreng dadakan pelanggan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {(laporan.stockList || [])
+                      .filter((s) => s.kategori !== 'Plastik')
+                      .map((stok) => {
+                        const isMentah = stok.kategori === 'Kerupuk Mentah';
+                        const balEquivalent = isMentah ? Math.floor(stok.jumlah / 5) : null;
+                        return (
+                          <div key={stok.id_stok} className="p-3 bg-gray-50 border border-gray-200 rounded-2xl hover:border-brand-maroon/30 transition">
+                            <span className="text-xs font-bold text-gray-800 block truncate">{stok.nama_bahan}</span>
+                            <span className="text-base font-black text-brand-maroon mt-1 block">
+                              {stok.jumlah} {stok.satuan}
+                            </span>
+                            {isMentah && balEquivalent !== null && (
+                              <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 block w-fit mt-1">
+                                Setara {balEquivalent} Bal
+                              </span>
+                            )}
+                            <span className="text-[10px] text-gray-400 block mt-1">Update: {stok.tanggal_update}</span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
               </div>
             )}
           </div>
@@ -1917,6 +2542,66 @@ export default function OwnerDashboardPage() {
                   />
                 </div>
 
+<<<<<<< HEAD
+=======
+                
+                {/* 4. Unggah Foto / Gambar Produk */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Foto Produk Kerupuk (Opsional)
+                  </label>
+
+                  {gambarProduk ? (
+                    <div className="p-3 border border-amber-300 bg-amber-50/70 rounded-2xl flex items-center gap-3">
+                      <img
+                        src={gambarProduk}
+                        alt="Preview Produk"
+                        className="w-16 h-16 rounded-xl object-cover border border-amber-300 shadow-sm shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-800 truncate">Foto kerupuk terpasang</p>
+                        <p className="text-[10px] text-gray-500">Akan tampil di katalog pelanggan & owner</p>
+                        <button
+                          type="button"
+                          onClick={() => setGambarProduk('')}
+                          className="mt-1 text-[11px] font-bold text-red-600 hover:text-red-700 hover:underline inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Hapus / Ganti Foto
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="border-2 border-dashed border-gray-300 hover:border-brand-maroon hover:bg-orange-50/40 rounded-2xl p-3.5 flex flex-col items-center justify-center cursor-pointer transition text-center group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center mb-1 group-hover:scale-105 transition shadow-sm">
+                          <ImageIcon className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 group-hover:text-brand-maroon">
+                          + Unggah Foto Kerupuk
+                        </span>
+                        <span className="text-[10px] text-gray-400 mt-0.5">
+                          Format JPG, PNG, WebP dari HP atau Komputer
+                        </span>
+                      </label>
+                      <input
+                        type="url"
+                        value={gambarProduk}
+                        onChange={(e) => setGambarProduk(e.target.value)}
+                        placeholder="Atau tempel link URL foto: https://..."
+                        className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Deskripsi */}
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Deskripsi (Opsional)
@@ -1951,9 +2636,179 @@ export default function OwnerDashboardPage() {
           </div>
         )}
 
+<<<<<<< HEAD
         {/* ========================================================================= */}
         {/* MODAL 6: RESTOCK PRODUK BAL */}
         {/* ========================================================================= */}
+=======
+        {/* MODAL EDIT DATA & FOTO PRODUK (CRUD UPDATE) */}
+        {showEditProductModal && selectedProductToEdit && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                    <Edit3 className="w-5 h-5 text-blue-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Edit Data & Foto Produk</h3>
+                    <p className="text-[11px] text-gray-400">ID #{selectedProductToEdit.id_produk} &bull; Katalog Pabrik Kerupuk</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEditProductModal(false);
+                    setSelectedProductToEdit(null);
+                  }}
+                  className="p-1 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditProductSubmit} className="space-y-4">
+                {/* Nama Produk */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Nama Kerupuk <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editNama}
+                    onChange={(e) => setEditNama(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                    required
+                  />
+                </div>
+
+                {/* Satuan Kemasan & Harga Jual */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Satuan Kemasan <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={editSatuan}
+                      onChange={(e) => setEditSatuan(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                    >
+                      <option value="Bal">Bal</option>
+                      <option value="Kg">Kg</option>
+                      <option value="Pack">Pack</option>
+                      <option value="Bungkus">Bungkus</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Harga Jual (Rp) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1000"
+                      step="500"
+                      value={editHarga}
+                      onChange={(e) => setEditHarga(parseInt(e.target.value) || 0)}
+                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Upload / Ganti Foto Produk */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Foto Produk Kerupuk
+                  </label>
+
+                  {editGambar ? (
+                    <div className="p-3 border border-blue-200 bg-blue-50/50 rounded-2xl flex items-center gap-3">
+                      <img
+                        src={editGambar}
+                        alt="Preview Edit Produk"
+                        className="w-16 h-16 rounded-xl object-cover border border-blue-200 shadow-sm shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-800 truncate">Foto kerupuk terpasang</p>
+                        <p className="text-[10px] text-gray-500">Tampil di dashboard pelanggan & owner</p>
+                        <button
+                          type="button"
+                          onClick={() => setEditGambar('')}
+                          className="mt-1 text-[11px] font-bold text-red-600 hover:text-red-700 hover:underline inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Hapus / Kosongkan Foto
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="border-2 border-dashed border-gray-300 hover:border-brand-maroon hover:bg-orange-50/40 rounded-2xl p-3.5 flex flex-col items-center justify-center cursor-pointer transition text-center group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleEditImageUpload}
+                          className="hidden"
+                        />
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-1 group-hover:scale-105 transition shadow-sm">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 group-hover:text-brand-maroon">
+                          + Unggah Foto Kerupuk Baru
+                        </span>
+                        <span className="text-[10px] text-gray-400 mt-0.5">
+                          Format JPG, PNG, WebP dari HP atau Komputer
+                        </span>
+                      </label>
+                      <input
+                        type="url"
+                        value={editGambar}
+                        onChange={(e) => setEditGambar(e.target.value)}
+                        placeholder="Atau tempel link URL foto: https://..."
+                        className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Deskripsi */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Deskripsi Singkat
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editDeskripsi}
+                    onChange={(e) => setEditDeskripsi(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                    placeholder="Keunggulan rasa, renyah, tekstur..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditProductModal(false);
+                      setSelectedProductToEdit(null);
+                    }}
+                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionState.type === 'loading'}
+                    className="py-3 px-4 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
+                  >
+                    {actionState.type === 'loading' ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL RESTOCK PASOKAN SUPPLIER OLEH OWNER */}
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
         {selectedProductToRestock && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
@@ -2019,6 +2874,7 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
         )}
+<<<<<<< HEAD
 
         {/* ========================================================================= */}
         {/* MODAL 7: CETAK RESI RESMI */}
@@ -2108,6 +2964,9 @@ export default function OwnerDashboardPage() {
         {/* ========================================================================= */}
         {/* MODAL 8: VERIFIKASI BUKTI TRANSFER */}
         {/* ========================================================================= */}
+=======
+        {/* MODAL VERIFIKASI BUKTI TRANSFER BANK PELANGGAN OLEH OWNER */}
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
         {selectedTransferProof && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
             <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative max-h-[92vh] overflow-y-auto">
@@ -2235,6 +3094,7 @@ export default function OwnerDashboardPage() {
         )}
 
         {/* ========================================================================= */}
+<<<<<<< HEAD
         {/* MODAL 10: CETAK LAPORAN KEUANGAN */}
         {/* ========================================================================= */}
         {showFinancialReportModal && (
@@ -2291,36 +3151,281 @@ export default function OwnerDashboardPage() {
                   </tbody>
                 </table>
               </div>
+=======
+        {/* MODAL CETAK DOKUMEN RESMI LAPORAN KEUANGAN PABRIK (HARIAN / BULANAN / TAHUNAN) */}
+        {/* ========================================================================= */}
+        {showFinancialReportModal && (() => {
+          const NAMA_BULAN = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+          ];
 
-              {/* Rincian Produk */}
-              {laporan?.produkBreakdown && laporan.produkBreakdown.length > 0 && (
-                <div className="space-y-2 text-xs mb-6">
-                  <h4 className="font-bold text-gray-900 text-sm border-l-4 border-brand-maroon pl-2">
-                    II. Rincian Penjualan per Varian Kerupuk
-                  </h4>
-                  <table className="w-full text-xs border border-gray-300">
-                    <thead className="bg-gray-100 font-bold">
-                      <tr>
-                        <th className="py-1.5 px-2 text-center">No</th>
-                        <th className="py-1.5 px-3 text-left">Nama Produk</th>
-                        <th className="py-1.5 px-3 text-center">Volume</th>
-                        <th className="py-1.5 px-3 text-right">Total Kontribusi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {laporan.produkBreakdown.map((p, idx) => (
-                        <tr key={idx}>
-                          <td className="py-1.5 px-2 text-center font-mono">{idx + 1}</td>
-                          <td className="py-1.5 px-3 font-medium">{p.nama}</td>
-                          <td className="py-1.5 px-3 text-center">{p.jumlah} {p.satuan}</td>
-                          <td className="py-1.5 px-3 text-right font-mono font-bold">Rp {Number(p.total).toLocaleString('id-ID')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          const validOrders = (laporan?.orders || []).filter((o) => o.status_pesanan !== 'dibatalkan');
+
+          // Filter order sesuai periode
+          const filteredOrders = validOrders.filter((o) => {
+            const raw = o.tanggal_pesanan || o.created_at || '';
+            if (!raw) return false;
+            const dateStr = raw.slice(0, 10);
+            if (printPeriod === 'harian') {
+              return dateStr === printDate;
+            }
+            if (printPeriod === 'bulanan') {
+              const prefix = `${printYear}-${String(printMonth).padStart(2, '0')}`;
+              return dateStr.startsWith(prefix);
+            }
+            if (printPeriod === 'tahunan') {
+              return dateStr.startsWith(String(printYear));
+            }
+            return true;
+          });
+
+          const pOmset = filteredOrders.reduce((sum, o) => sum + (Number(o.total_harga) || 0), 0);
+          const pLunas = filteredOrders
+            .filter((o) => o.pembayaran?.[0]?.status_pembayaran === 'lunas')
+            .reduce((sum, o) => sum + (Number(o.total_harga) || 0), 0);
+          const pPiutang = filteredOrders
+            .filter((o) => o.pembayaran?.[0]?.status_pembayaran !== 'lunas')
+            .reduce((sum, o) => sum + (Number(o.total_harga) || 0), 0);
+          const pHPP = Math.round(pOmset * 0.7);
+          const pLaba = Math.round(pOmset * 0.3);
+
+          // Rincian produk dalam periode
+          const prodMap: Record<string, { nama: string; satuan: string; jumlah: number; total: number }> = {};
+          filteredOrders.forEach((o) => {
+            const nama = o.produk?.nama_produk || 'Kerupuk Lainnya';
+            const satuan = o.produk?.satuan || 'Bal';
+            if (!prodMap[nama]) {
+              prodMap[nama] = { nama, satuan, jumlah: 0, total: 0 };
+            }
+            prodMap[nama].jumlah += Number(o.jumlah) || 0;
+            prodMap[nama].total += Number(o.total_harga) || 0;
+          });
+          const prodBreakdown = Object.values(prodMap).sort((a, b) => b.total - a.total);
+
+          // Rincian 12 Bulan (untuk Tahunan)
+          const monthlyBreakdown = printPeriod === 'tahunan' ? Array.from({ length: 12 }, (_, i) => {
+            const mNum = i + 1;
+            const prefix = `${printYear}-${String(mNum).padStart(2, '0')}`;
+            const mOrders = validOrders.filter((o) => (o.tanggal_pesanan || o.created_at || '').startsWith(prefix));
+            const mOmset = mOrders.reduce((s, o) => s + (Number(o.total_harga) || 0), 0);
+            const mLunas = mOrders.filter((o) => o.pembayaran?.[0]?.status_pembayaran === 'lunas').reduce((s, o) => s + (Number(o.total_harga) || 0), 0);
+            return {
+              bulan: NAMA_BULAN[i],
+              omset: mOmset,
+              lunas: mLunas,
+              transaksi: mOrders.length,
+            };
+          }) : [];
+
+          // Format judul & periode
+          let judulDokumen = 'DOKUMEN RESMI: LAPORAN PENJUALAN & KEUANGAN HARIAN';
+          let labelPeriode = `Hari / Tanggal: ${printDate ? new Date(printDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}`;
+          if (printPeriod === 'bulanan') {
+            judulDokumen = 'DOKUMEN RESMI: LAPORAN PENJUALAN & KEUANGAN BULANAN';
+            labelPeriode = `Periode Bulan: ${NAMA_BULAN[printMonth - 1]} ${printYear}`;
+          } else if (printPeriod === 'tahunan') {
+            judulDokumen = 'DOKUMEN RESMI: LAPORAN KEUANGAN & LABA RUGI TAHUNAN';
+            labelPeriode = `Tahun Buku: ${printYear}`;
+          }
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:static print:p-0 print:bg-white print:m-0">
+              <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-gray-100 max-h-[94vh] overflow-y-auto relative print:p-0 print:border-none print:shadow-none print:max-w-full print:max-h-none print:overflow-visible">
+                
+                {/* Header Kontrol Pilihan Laporan (Hanya tampil di layar, disembunyikan saat dicetak) */}
+                <div className="print:hidden pb-5 mb-5 border-b border-gray-100">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <Printer className="w-5 h-5 text-brand-maroon" />
+                        Pilihan Periode Cetak Dokumen Laporan
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Pilih jenis laporan yang ingin dicetak ke PDF / kertas (Harian, Bulanan, atau Tahunan)
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowFinancialReportModal(false)}
+                      className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* 3 Tab Opsi: Harian, Bulanan, Tahunan */}
+                  <div className="grid grid-cols-3 gap-2 p-1.5 bg-gray-100 rounded-2xl mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setPrintPeriod('harian')}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        printPeriod === 'harian'
+                          ? 'bg-brand-maroon text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>📅 Laporan Harian</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrintPeriod('bulanan')}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        printPeriod === 'bulanan'
+                          ? 'bg-brand-maroon text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>📆 Laporan Bulanan</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrintPeriod('tahunan')}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        printPeriod === 'tahunan'
+                          ? 'bg-brand-maroon text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                      }`}
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>📊 Laporan Tahunan</span>
+                    </button>
+                  </div>
+
+                  {/* Filter Pemilihan Tanggal / Bulan / Tahun */}
+                  <div className="flex flex-wrap items-center gap-3 p-3 bg-amber-50/80 border border-amber-200 rounded-2xl text-xs text-amber-900">
+                    {printPeriod === 'harian' && (
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Pilih Tanggal:</span>
+                        <input
+                          type="date"
+                          value={printDate}
+                          onChange={(e) => setPrintDate(e.target.value)}
+                          className="px-3 py-1.5 bg-white border border-amber-300 rounded-xl font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                        />
+                      </div>
+                    )}
+
+                    {printPeriod === 'bulanan' && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold">Pilih Bulan & Tahun:</span>
+                        <select
+                          value={printMonth}
+                          onChange={(e) => setPrintMonth(Number(e.target.value))}
+                          className="px-3 py-1.5 bg-white border border-amber-300 rounded-xl font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                        >
+                          {NAMA_BULAN.map((m, idx) => (
+                            <option key={idx} value={idx + 1}>{m}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={printYear}
+                          onChange={(e) => setPrintYear(Number(e.target.value))}
+                          className="px-3 py-1.5 bg-white border border-amber-300 rounded-xl font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                        >
+                          <option value={2024}>2024</option>
+                          <option value={2025}>2025</option>
+                          <option value={2026}>2026</option>
+                          <option value={2027}>2027</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {printPeriod === 'tahunan' && (
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Pilih Tahun Pembukuan:</span>
+                        <select
+                          value={printYear}
+                          onChange={(e) => setPrintYear(Number(e.target.value))}
+                          className="px-3 py-1.5 bg-white border border-amber-300 rounded-xl font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                        >
+                          <option value={2024}>2024</option>
+                          <option value={2025}>2025</option>
+                          <option value={2026}>2026</option>
+                          <option value={2027}>2027</option>
+                        </select>
+                      </div>
+                    )}
+
+                    <span className="ml-auto text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200">
+                      Tercatat: {filteredOrders.length} Pesanan Sah
+                    </span>
+                  </div>
                 </div>
-              )}
 
+                {/* ============================================================= */}
+                {/* DOKUMEN CETAK RESMI (AKAN MUNCUL DI PRINT / PDF) */}
+                {/* ============================================================= */}
+                <div className="printable-report space-y-5">
+                  {/* KOP RESMI LAPORAN PABRIK KERUPUK DIANSYAH */}
+                  <div className="text-center pb-4 border-b-2 border-gray-900">
+                    <div className="flex items-center justify-center gap-3 mb-1">
+                      <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-2xl flex items-center justify-center shadow">
+                        KD
+                      </div>
+                      <div className="text-left">
+                        <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">Pabrik Kerupuk Diansyah</h2>
+                        <p className="text-xs text-gray-600 font-medium">Spesialis Kerupuk Gurih & Renyah Berkualitas Tinggi &bull; Goreng Dadakan</p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang &bull; Telp / WA: 0895-2578-3995
+                    </p>
+                    <div className="mt-2.5 inline-block px-4 py-1 rounded-full text-xs font-black bg-gray-100 text-gray-900 border border-gray-400 tracking-wider uppercase">
+                      {judulDokumen}
+                    </div>
+                  </div>
+
+                  {/* Info Dokumen */}
+                  <div className="grid grid-cols-2 text-xs py-2 border-b border-gray-200">
+                    <div>
+                      <span className="text-gray-500 block text-[11px]">Cakupan Periode:</span>
+                      <p className="font-bold text-gray-900 text-sm">{labelPeriode}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-gray-500 block text-[11px]">Pimpinan / Penanggung Jawab:</span>
+                      <p className="font-bold text-gray-900 text-sm">Bapak Diansyah (Owner)</p>
+                    </div>
+                  </div>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
+
+                  {/* Tabel I: Rekapitulasi Neraca Keuangan Periode Tersebut */}
+                  <div className="space-y-2 text-xs">
+                    <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wide border-l-4 border-brand-maroon pl-2">
+                      I. Rekapitulasi Neraca & Arus Kas {printPeriod === 'harian' ? 'Harian' : printPeriod === 'bulanan' ? 'Bulanan' : 'Tahunan'}
+                    </h4>
+                    <table className="w-full text-xs border border-gray-300 rounded-lg overflow-hidden">
+                      <tbody className="divide-y divide-gray-200">
+                        <tr className="bg-gray-100 font-bold">
+                          <td className="py-2 px-3">Komponen Keuangan Operasional</td>
+                          <td className="py-2 px-3 text-right">Nominal (Rupiah)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 px-3 font-semibold text-gray-800">1. Total Omset Penjualan (Gross Revenue)</td>
+                          <td className="py-2 px-3 text-right font-mono font-bold text-gray-900">Rp {pOmset.toLocaleString('id-ID')}</td>
+                        </tr>
+                        <tr className="bg-emerald-50/50">
+                          <td className="py-2 px-3 font-semibold text-emerald-900">2. Realisasi Kas Masuk (Lunas Di-ACC)</td>
+                          <td className="py-2 px-3 text-right font-mono font-bold text-emerald-700">Rp {pLunas.toLocaleString('id-ID')}</td>
+                        </tr>
+                        <tr className="bg-amber-50/50">
+                          <td className="py-2 px-3 font-semibold text-amber-900">3. Piutang Pelanggan (Menunggu Pembayaran)</td>
+                          <td className="py-2 px-3 text-right font-mono font-bold text-amber-800">Rp {pPiutang.toLocaleString('id-ID')}</td>
+                        </tr>
+                        <tr className="bg-rose-50/50">
+                          <td className="py-2 px-3 font-semibold text-rose-900">4. Estimasi Biaya Pokok Produksi / HPP (~70%)</td>
+                          <td className="py-2 px-3 text-right font-mono font-bold text-rose-700">- Rp {pHPP.toLocaleString('id-ID')}</td>
+                        </tr>
+                        <tr className="bg-gray-100 font-black text-xs">
+                          <td className="py-2.5 px-3 text-brand-darkmaroon">5. ESTIMASI LABA BERSIH OPERASIONAL (~30%)</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-brand-maroon">Rp {pLaba.toLocaleString('id-ID')}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+<<<<<<< HEAD
               <div className="pt-6 border-t border-gray-200 flex justify-between items-end text-xs">
                 <div className="text-gray-400 text-[10px]">
                   Dicetak dari Sistem E-KRUPSY
@@ -2354,9 +3459,493 @@ export default function OwnerDashboardPage() {
                 </button>
               </div>
             </div>
+=======
+                  {/* Tabel II: Rincian Varian Produk Terjual */}
+                  <div className="space-y-2 text-xs">
+                    <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wide border-l-4 border-brand-maroon pl-2">
+                      II. Rincian Penjualan per Varian Kerupuk ({labelPeriode})
+                    </h4>
+                    {prodBreakdown.length === 0 ? (
+                      <p className="text-gray-400 italic text-[11px] p-2 bg-gray-50 rounded-lg">
+                        Tidak ada penjualan produk kerupuk tercatat pada periode ini.
+                      </p>
+                    ) : (
+                      <table className="w-full text-xs border border-gray-300">
+                        <thead className="bg-gray-100 font-bold">
+                          <tr>
+                            <th className="py-1.5 px-2 text-center w-10">No</th>
+                            <th className="py-1.5 px-3 text-left">Nama Produk Kerupuk</th>
+                            <th className="py-1.5 px-3 text-center">Volume</th>
+                            <th className="py-1.5 px-3 text-right">Total Penjualan</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {prodBreakdown.map((p, idx) => (
+                            <tr key={idx}>
+                              <td className="py-1.5 px-2 text-center font-mono">{idx + 1}</td>
+                              <td className="py-1.5 px-3 font-medium">{p.nama}</td>
+                              <td className="py-1.5 px-3 text-center">{p.jumlah} {p.satuan}</td>
+                              <td className="py-1.5 px-3 text-right font-mono font-bold">Rp {p.total.toLocaleString('id-ID')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+
+                  {/* Tabel III Khusus Harian: Daftar Transaksi Masuk Hari Ini */}
+                  {printPeriod === 'harian' && (
+                    <div className="space-y-2 text-xs">
+                      <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wide border-l-4 border-brand-maroon pl-2">
+                        III. Rincian Transaksi Pesanan Masuk ({labelPeriode})
+                      </h4>
+                      {filteredOrders.length === 0 ? (
+                        <p className="text-gray-400 italic text-[11px] p-2 bg-gray-50 rounded-lg">
+                          Tidak ada pesanan pelanggan tercatat pada tanggal ini.
+                        </p>
+                      ) : (
+                        <table className="w-full text-[11px] border border-gray-300">
+                          <thead className="bg-gray-100 font-bold">
+                            <tr>
+                              <th className="py-1.5 px-2 text-center w-8">No</th>
+                              <th className="py-1.5 px-2 text-center">ID</th>
+                              <th className="py-1.5 px-2 text-left">Pelanggan</th>
+                              <th className="py-1.5 px-2 text-left">Produk</th>
+                              <th className="py-1.5 px-2 text-center">Qty</th>
+                              <th className="py-1.5 px-2 text-right">Total</th>
+                              <th className="py-1.5 px-2 text-center">Metode</th>
+                              <th className="py-1.5 px-2 text-center">Status Bayar</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {filteredOrders.map((o, idx) => {
+                              const payStatus = o.pembayaran?.[0]?.status_pembayaran === 'lunas' ? 'LUNAS' : 'PENDING';
+                              return (
+                                <tr key={o.id_pesanan}>
+                                  <td className="py-1 px-2 text-center font-mono">{idx + 1}</td>
+                                  <td className="py-1 px-2 text-center font-mono">#{o.id_pesanan}</td>
+                                  <td className="py-1 px-2 font-medium truncate max-w-[120px]">{o.pelanggan?.nama_lengkap || '-'}</td>
+                                  <td className="py-1 px-2 truncate max-w-[130px]">{o.produk?.nama_produk} ({o.varian_rasa})</td>
+                                  <td className="py-1 px-2 text-center">{o.jumlah} {o.produk?.satuan || 'Bal'}</td>
+                                  <td className="py-1 px-2 text-right font-mono font-bold">Rp {Number(o.total_harga).toLocaleString('id-ID')}</td>
+                                  <td className="py-1 px-2 text-center uppercase text-[10px]">{o.pembayaran?.[0]?.metode_pembayaran || 'tunai'}</td>
+                                  <td className="py-1 px-2 text-center font-bold text-[10px]">{payStatus}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tabel III Khusus Tahunan: Rekapitulasi 12 Bulan */}
+                  {printPeriod === 'tahunan' && (
+                    <div className="space-y-2 text-xs">
+                      <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wide border-l-4 border-brand-maroon pl-2">
+                        III. Rekapitulasi Performa Bulanan (Januari s.d. Desember {printYear})
+                      </h4>
+                      <table className="w-full text-xs border border-gray-300">
+                        <thead className="bg-gray-100 font-bold">
+                          <tr>
+                            <th className="py-1.5 px-2 text-center w-8">No</th>
+                            <th className="py-1.5 px-3 text-left">Bulan</th>
+                            <th className="py-1.5 px-3 text-center">Transaksi</th>
+                            <th className="py-1.5 px-3 text-right">Kas Lunas</th>
+                            <th className="py-1.5 px-3 text-right">Total Omset</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {monthlyBreakdown.map((mb, idx) => (
+                            <tr key={idx} className={mb.omset > 0 ? 'bg-amber-50/20' : ''}>
+                              <td className="py-1.5 px-2 text-center font-mono">{idx + 1}</td>
+                              <td className="py-1.5 px-3 font-semibold">{mb.bulan}</td>
+                              <td className="py-1.5 px-3 text-center font-mono">{mb.transaksi}</td>
+                              <td className="py-1.5 px-3 text-right font-mono">Rp {mb.lunas.toLocaleString('id-ID')}</td>
+                              <td className="py-1.5 px-3 text-right font-mono font-bold">Rp {mb.omset.toLocaleString('id-ID')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Lembar Tanda Tangan Resmi */}
+                  <div className="pt-6 border-t border-gray-300 flex justify-between items-end text-xs">
+                    <div className="text-gray-400 text-[10px]">
+                      Dicetak otomatis via Sistem Informasi E-KRUPSY &bull; {new Date().toLocaleString('id-ID')}
+                    </div>
+                    <div className="text-center w-56">
+                      <p className="text-gray-600 mb-12">
+                        Sumedang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br />
+                        <strong>Owner / Pimpinan Pabrik</strong>
+                      </p>
+                      <p className="font-bold text-gray-900 border-t border-gray-900 pt-1">
+                        Bapak Diansyah
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tombol Cetak / Tutup Bawah */}
+                <div className="mt-6 flex gap-3 print:hidden">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex-1 py-3 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg transition active:scale-95"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Cetak Dokumen Sekarang (PDF / Print)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFinancialReportModal(false)}
+                    className="py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-2xl transition"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* MODAL VERIFIKASI BUKTI TRANSFER BANK PELANGGAN OLEH OWNER */}
+        {selectedTransferProof && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative max-h-[92vh] overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => setSelectedTransferProof(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <ImageIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">Verifikasi Bukti Transfer Bank</h3>
+                  <p className="text-xs text-gray-400">
+                    Pesanan #{selectedTransferProof.id_pesanan} &bull; {selectedTransferProof.pelanggan?.nama_lengkap || 'Pelanggan'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Rincian Transaksi */}
+              <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 text-xs mb-4">
+                <div>
+                  <span className="text-gray-400 block text-[10px]">TOTAL YANG HARUS DITRANSFER:</span>
+                  <span className="font-mono font-black text-brand-maroon text-sm">
+                    Rp {Number(selectedTransferProof.total_harga).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-gray-400 block text-[10px]">STATUS SAAT INI:</span>
+                  <span className={`font-bold ${selectedTransferProof.pembayaran?.[0]?.status_pembayaran === 'lunas' ? 'text-emerald-600' : 'text-blue-600'}`}>
+                    {selectedTransferProof.pembayaran?.[0]?.status_pembayaran === 'lunas' ? '✓ LUNAS' : 'MENUNGGU ACC'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Gambar Bukti Screenshot Transfer */}
+              <div className="rounded-2xl border border-gray-200 bg-gray-100 p-2 overflow-hidden flex items-center justify-center max-h-[55vh]">
+                {selectedTransferProof.pembayaran?.[0]?.bukti_transfer ? (
+                  <img
+                    src={selectedTransferProof.pembayaran[0].bukti_transfer}
+                    alt="Screenshot Bukti Transfer Pelanggan"
+                    className="max-h-[50vh] object-contain rounded-xl shadow-sm"
+                  />
+                ) : (
+                  <div className="p-8 text-center text-gray-400 text-xs">
+                    Pelanggan belum mengunggah gambar bukti transfer.
+                  </div>
+                )}
+              </div>
+
+              {/* Tombol Aksi Owner */}
+              <div className="mt-5 flex gap-2 pt-2 border-t border-gray-100">
+                {selectedTransferProof.pembayaran?.[0]?.status_pembayaran !== 'lunas' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleConfirmPayment(selectedTransferProof.id_pesanan);
+                      setSelectedTransferProof(null);
+                    }}
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition active:scale-95"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>✓ ACC Lunas (Bukti Transfer Sah)</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedTransferProof(null)}
+                  className="py-3 px-5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
           </div>
         )}
       </div>
+          {/* MODAL CETAK RESI RESMI OLEH OWNER UNTUK DIKASIH KE PELANGGAN (UC-13) */}
+      {selectedOrderToPrint && (
+        <>
+          {/* TAMPILAN 1: MODAL POPUP DI LAYAR DASHBOARD (PERSIS GAMBAR 2) */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:hidden">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
+              <button
+                type="button"
+                onClick={() => setSelectedOrderToPrint(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Header Resi Pabrik */}
+              <div className="text-center pb-4 border-b border-dashed border-gray-300">
+                <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-xl mx-auto flex items-center justify-center mb-2 shadow">
+                  KD
+                </div>
+                <h3 className="font-black text-gray-900 text-lg uppercase tracking-wide">Pabrik Kerupuk Diansyah</h3>
+                <p className="text-[11px] text-gray-500">Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang</p>
+                <div className="mt-2 inline-block px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  RESI RESMI PEMBAYARAN SAH
+                </div>
+              </div>
+
+              {/* Rincian Transaksi */}
+              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Nomor Transaksi:</span>
+                  <span className="font-mono font-bold text-gray-800">TRX-KD-{selectedOrderToPrint.id_pesanan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Tanggal:</span>
+                  <span className="font-medium text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Nama Pelanggan:</span>
+                  <span className="font-bold text-gray-800">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">No. Telepon:</span>
+                  <span className="font-medium text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</span>
+                </div>
+              </div>
+
+              {/* Rincian Produk */}
+              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>{selectedOrderToPrint.produk?.nama_produk} ({selectedOrderToPrint.varian_rasa})</span>
+                  <span>{selectedOrderToPrint.jumlah} {selectedOrderToPrint.produk?.satuan}</span>
+                </div>
+                <div className="flex justify-between text-gray-500 text-[11px]">
+                  <span>Ukuran Kemasan: {selectedOrderToPrint.ukuran_plastik}</span>
+                  <span>Metode: <strong className="uppercase">{selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}</strong></span>
+                </div>
+                <div className="flex justify-between pt-2 text-sm font-black text-brand-maroon">
+                  <span>TOTAL PEMBAYARAN:</span>
+                  <span>Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+
+              {/* Status Lunas & Tanda Terima */}
+              <div className="py-3 text-center">
+                <p className="text-[11px] text-gray-600 font-bold">
+                  Status: <span className="text-emerald-600">✓ LUNAS (Kas Telah Diterima Owner)</span>
+                </p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Resi cetak ini resmi diserahkan kepada pelanggan sebagai bukti transaksi sah Pabrik Kerupuk Diansyah.
+                </p>
+              </div>
+
+              {/* Tombol Cetak Khusus Owner */}
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex-1 py-2.5 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition active:scale-95"
+                >
+                  <Printer className="w-4 h-4" />
+                  Cetak Resi Fisik (Print)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderToPrint(null)}
+                  className="py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* TAMPILAN 2: DOKUMEN CETAK RESMI DI KERTAS (PERSIS GAMBAR 3 TAPI FULL-PAGE & CENTER PROPORSIONAL) */}
+          <div className="hidden print:block print:w-full print:m-0 print:p-0">
+            <div className="print-receipt-fullpage">
+              {/* Bagian Atas: KOP RESMI PABRIK KERUPUK DIANSYAH */}
+              <div>
+                <div className="text-center pb-4 border-b-2 border-gray-900">
+                  <div className="flex items-center justify-center gap-3 mb-1">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-2xl flex items-center justify-center shadow">
+                      KD
+                    </div>
+                    <div className="text-left">
+                      <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">Pabrik Kerupuk Diansyah</h2>
+                      <p className="text-xs text-gray-600 font-medium">Spesialis Kerupuk Gurih & Renyah Berkualitas Tinggi &bull; Sumedang</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang &bull; Telp / WA: 0895-2578-3995
+                  </p>
+                  <div className="mt-2.5 inline-block px-4 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-400 uppercase tracking-wider">
+                    ✓ RESI RESMI PEMBAYARAN SAH
+                  </div>
+                </div>
+
+                {/* Grid 2 Kolom Info Transaksi & Info Pelanggan */}
+                <div className="grid grid-cols-2 gap-6 py-4 border-b border-dashed border-gray-300 text-xs">
+                  {/* Kolom Kiri */}
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap w-28">No. Transaksi</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center w-3">:</td>
+                        <td className="py-1 font-mono font-bold text-gray-900">TRX-KD-{selectedOrderToPrint.id_pesanan}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Tanggal Pesanan</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1 font-semibold text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Metode Bayar</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1 font-bold text-gray-900 uppercase">
+                          {selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Kolom Kanan */}
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap w-28">Nama Pelanggan</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center w-3">:</td>
+                        <td className="py-1 font-bold text-gray-900">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">No. Telepon</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1 font-semibold text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Status Pesanan</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            ✓ SUDAH LUNAS
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Bagian Tengah: Tabel Rincian Produk & Total Pembayaran & Status */}
+              <div className="my-auto py-3">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300 bg-gray-50 text-gray-700 font-bold">
+                      <th className="py-2.5 px-3 text-center w-12">No</th>
+                      <th className="py-2.5 px-3">Produk & Varian Rasa</th>
+                      <th className="py-2.5 px-3 text-center">Ukuran Kemasan</th>
+                      <th className="py-2.5 px-3 text-center">Jumlah (Qty)</th>
+                      <th className="py-2.5 px-3 text-right">Total Harga</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    <tr>
+                      <td className="py-3 px-3 text-center font-bold text-gray-600">1</td>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-gray-900 text-sm block">
+                          {selectedOrderToPrint.produk?.nama_produk}
+                        </span>
+                        <span className="text-[11px] text-gray-500 font-medium">
+                          Varian: {selectedOrderToPrint.varian_rasa}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center font-medium text-gray-700">
+                        {selectedOrderToPrint.ukuran_plastik}
+                      </td>
+                      <td className="py-3 px-3 text-center font-bold text-gray-900">
+                        {selectedOrderToPrint.jumlah} {selectedOrderToPrint.produk?.satuan}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-gray-900 text-sm">
+                        Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-800 bg-gray-50 font-black text-sm">
+                      <td colSpan={4} className="py-3 px-4 text-right uppercase tracking-wider text-gray-900">
+                        TOTAL PEMBAYARAN:
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-base text-brand-maroon">
+                        Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* Status Lunas Box */}
+                <div className="py-3 px-4 bg-emerald-50/60 border border-emerald-200 rounded-xl my-4 text-center">
+                  <p className="text-xs text-emerald-900 font-bold">
+                    Status Pembayaran: <span className="text-emerald-700 font-black">✓ LUNAS (Kas Telah Diterima & Diverifikasi Owner)</span>
+                  </p>
+                  <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                    Resi cetak ini resmi diserahkan kepada pelanggan sebagai bukti transaksi sah Pabrik Kerupuk Diansyah.
+                  </p>
+                </div>
+              </div>
+
+              {/* Bagian Bawah: Tanda Tangan Resmi Pengesahan Resi */}
+              <div>
+                <div className="pt-2 flex justify-between items-end text-xs text-gray-700">
+                  <div className="text-center w-52">
+                    <p className="font-semibold text-gray-600 mb-14">Tanda Terima Pelanggan,</p>
+                    <p className="font-bold text-gray-900 border-t border-gray-400 pt-1">
+                      ( {selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'} )
+                    </p>
+                  </div>
+                  <div className="text-center w-56">
+                    <p className="text-gray-500 text-[10px] mb-1">
+                      Sumedang, {selectedOrderToPrint.tanggal_pesanan || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    <p className="font-semibold text-gray-600 mb-14">Owner / Kasir Pabrik,</p>
+                    <p className="font-bold text-gray-900 border-t border-gray-800 pt-1">
+                      ( Bapak Diansyah )
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[10px] text-gray-400">
+                  Dokumen resi transaksi fisik resmi diterbitkan oleh Sistem Informasi E-KRUPSY &bull; Pabrik Kerupuk Diansyah
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </RoleGuard>
   );
 }

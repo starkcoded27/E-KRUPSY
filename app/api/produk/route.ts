@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { nama_produk, satuan, harga, stok, deskripsi } = body;
+    const { nama_produk, satuan, harga, stok, deskripsi, gambar_url } = body;
 
     // 4 Jenis Validasi Input
     const validation = validateForm([
@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
         harga: Number(harga),
         stok: Number(stok),
         deskripsi: deskripsi ? String(deskripsi).trim() : null,
+        gambar_url: gambar_url ? String(gambar_url).trim() : null,
       })
       .select()
       .single();
@@ -145,6 +146,47 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
+
+    // Mode Edit Data & Foto Produk
+    if (body.action === 'edit') {
+      const { id_produk, nama_produk, satuan, harga, deskripsi, gambar_url } = body;
+      const validation = validateForm([
+        { field: 'id_produk', label: 'ID Produk', value: id_produk, required: true, dataType: 'integer' },
+        { field: 'nama_produk', label: 'Nama Produk', value: nama_produk, required: true, dataType: 'string' },
+        { field: 'harga', label: 'Harga Jual', value: harga, required: true, dataType: 'number', domain: { min: 1000 } },
+      ]);
+
+      if (!validation.isValid) {
+        return NextResponse.json({
+          message: validation.firstError || 'Data edit produk tidak valid.',
+          errors: validation.errors,
+        }, { status: 400 });
+      }
+
+      const { data: updatedProd, error: updateErr } = await supabase
+        .from('produk')
+        .update({
+          nama_produk: String(nama_produk).trim(),
+          satuan: satuan ? String(satuan).trim() : 'Bal',
+          harga: Number(harga),
+          deskripsi: deskripsi ? String(deskripsi).trim() : null,
+          gambar_url: gambar_url ? String(gambar_url).trim() : null,
+        })
+        .eq('id_produk', Number(id_produk))
+        .select()
+        .single();
+
+      if (updateErr) {
+        return NextResponse.json({ message: 'Gagal mengubah produk: ' + updateErr.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Produk "${updatedProd.nama_produk}" berhasil diperbarui!`,
+        data: updatedProd,
+      });
+    }
+
     const { id_produk, additional_stok } = body;
 
     const validation = validateForm([
@@ -227,6 +269,35 @@ export async function PATCH(req: NextRequest) {
       message: `Berhasil restock ${currentProd.nama_produk}: +${addBal} Bal (Otomatis menambah +${kgEquivalent} Kg bahan mentah di dapur). Total stok sekarang: ${newStokBal} Bal.`,
       data: updatedProd,
     });
+  } catch (err: any) {
+    return NextResponse.json({ message: 'Terjadi kesalahan sistem: ' + err.message }, { status: 500 });
+  }
+}
+
+
+export async function DELETE(req: NextRequest) {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ message: 'ID Produk wajib disertakan.' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('produk')
+      .delete()
+      .eq('id_produk', Number(id));
+
+    if (error) {
+      return NextResponse.json({ message: 'Gagal menghapus produk: ' + error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Produk berhasil dihapus dari katalog pabrik.' });
   } catch (err: any) {
     return NextResponse.json({ message: 'Terjadi kesalahan sistem: ' + err.message }, { status: 500 });
   }

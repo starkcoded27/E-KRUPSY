@@ -10,12 +10,17 @@ import {
   CheckCircle2, 
   Clock, 
   Layers, 
-  ArrowRight, 
   RefreshCw,
+<<<<<<< HEAD
   Sparkles,
   ShieldCheck,
   Scale,
   Check
+=======
+  AlertTriangle,
+  ShieldCheck,
+  Eye
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
 } from 'lucide-react';
 
 interface ProduksiItem {
@@ -124,6 +129,7 @@ export default function StaffPenggorengDashboardPage() {
     <RoleGuard allowedRoles={['staff_penggoreng']} pageTitle="Dashboard Staf Penggorengan">
       <div className="space-y-6">
         {/* Banner Staf Penggoreng */}
+<<<<<<< HEAD
         <div className="bg-gradient-to-r from-orange-700 via-brand-maroon to-amber-900 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -145,6 +151,31 @@ export default function StaffPenggorengDashboardPage() {
                 Segarkan Antrean
               </button>
             </div>
+=======
+        <div className="bg-gradient-to-r from-orange-700 via-brand-maroon to-amber-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+          <div className="relative z-10 max-w-2xl">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-400/20 text-orange-200 border border-orange-300/30 mb-3">
+              <Flame className="w-3.5 h-3.5 text-orange-300" />
+              Divisi Operasional Penggorengan Dadakan
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
+              Antrean Penggorengan & Stok Wajan
+            </h1>
+            <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
+              Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau ketersediaan stok bahan baku wajan dan memproses antrean penggorengan pesanan pelanggan.
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => fetchData()}
+              disabled={isLoading}
+              className="inline-flex items-center gap-1.5 text-xs text-white font-bold bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl border border-white/20 transition"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Muat Ulang Antrean & Stok
+            </button>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
           </div>
         </div>
 
@@ -214,9 +245,17 @@ export default function StaffPenggorengDashboardPage() {
                         </span>
                       </div>
 
+<<<<<<< HEAD
                       <div className="font-bold text-gray-900 text-sm">
                         {item.produk?.nama_produk} &bull;{' '}
                         <span className="text-orange-700">{item.pesanan?.jumlah} {item.produk?.satuan || 'Bal'}</span>
+=======
+                      <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.produk?.nama_produk}</h3>
+                      <div className="text-gray-600 mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-xs sm:text-sm">
+                        <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
+                        <span>Varian Rasa: <strong className="text-orange-700">{item.pesanan?.varian_rasa}</strong></span>
+                        <span>Pelanggan: <strong className="text-gray-800">{item.pesanan?.pelanggan?.nama_lengkap || '-'}</strong></span>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                       </div>
 
                       <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-600">
@@ -278,6 +317,7 @@ export default function StaffPenggorengDashboardPage() {
           )}
         </div>
 
+<<<<<<< HEAD
         {/* RIWAYAT PENGGORENGAN SELESAI */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-2">
@@ -306,6 +346,81 @@ export default function StaffPenggorengDashboardPage() {
               ))}
             </div>
           )}
+=======
+        {/* KETERSEDIAAN STOK BAHAN BAKU & BUMBU DI DAPUR (VIEW OUTPUT UNTUK PENGGORENG) */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-brand-maroon" />
+                  Ketersediaan Stok Bahan Baku & Bumbu di Dapur (View Output)
+                </h2>
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                  Goreng Dadakan
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Output pemantauan ketersediaan bahan baku wajan (<strong>1 Bal = 5 Kg mentah</strong>). Pasokan bahan baku dikelola langsung oleh <strong>Owner</strong>.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                Mode: Khusus Pantau Stok (View Only)
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded-xl border border-gray-200">
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-maroon" />
+                Input Pasokan: Khusus Owner
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {stockList
+              .filter((s) => s.kategori !== 'Plastik')
+              .map((stok) => {
+                const isMentah = stok.kategori === 'Kerupuk Mentah';
+                const balEquivalent = isMentah ? Math.floor(stok.jumlah / 5) : null;
+
+                return (
+                  <div
+                    key={stok.id_stok}
+                    className="p-4 rounded-2xl border border-gray-200 bg-gray-50 flex flex-col justify-between hover:border-brand-maroon/30 transition shadow-sm"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-1 mb-1">
+                        <span className="font-bold text-gray-900 text-sm block leading-tight">{stok.nama_bahan}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          stok.jumlah < 20
+                            ? 'bg-red-100 text-red-700 border border-red-200'
+                            : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                        }`}>
+                          {stok.jumlah < 20 ? 'Menipis' : 'Cukup'}
+                        </span>
+                      </div>
+
+                      <span className="text-xl font-black text-brand-maroon mt-2 block">
+                        {stok.jumlah} {stok.satuan}
+                      </span>
+
+                      {isMentah && balEquivalent !== null && (
+                        <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-1 rounded-md border border-orange-200 block w-fit mt-2">
+                          Setara {balEquivalent} Bal di Katalog
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="pt-3 mt-3 border-t border-gray-200/70 flex items-center justify-between text-[11px] text-gray-500">
+                      <span>Kategori: {stok.kategori}</span>
+                      <span>Update: {stok.tanggal_update}</span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
         </div>
       </div>
     </RoleGuard>

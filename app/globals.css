@@ -22,10 +22,50 @@ body {
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out forwards;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  header, footer, nav, aside {
+    display: none !important;
+  }
+
+  html, body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 14mm;
+  }
+
+  .print-receipt-fullpage {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    min-height: 85vh !important;
+    height: 85vh !important;
+    border: 2px solid #1f2937 !important;
+    border-radius: 1.25rem !important;
+    padding: 24px 30px !important;
+    box-sizing: border-box !important;
+    margin: auto !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
 }

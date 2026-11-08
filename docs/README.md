@@ -24,7 +24,7 @@ Repositori ini berisi implementasi perangkat lunak sistem pemesanan dan produksi
 |---|---|---|---|
 | 1 | **Pelanggan** | Registrasi Mandiri | Hanya dapat mengakses Katalog Produk, Keranjang, Pemesanan, dan Status Pesanan Pribadi. **Tidak dapat mengakses dashboard internal**. |
 | 2 | **Owner (Pimpinan)** | `owner` / `owner123` | Dashboard Keuangan, Laporan Harian, Konfirmasi Pembayaran Kas, Manajemen Produk & Stok. |
-| 3 | **Staf Penggoreng** | `penggoreng` / `goreng123` | Antrean Penggorengan Kerupuk, Update Status Produksi, Input Stok Bahan Baku & Bumbu. |
+| 3 | **Staf Penggoreng** | `penggoreng` / `goreng123` | Antrean Penggorengan Kerupuk, Update Status Produksi, View Output Monitoring Stok Bahan Baku Dapur. |
 | 4 | **Staf Pembungkus** | `pembungkus` / `bungkus123` | Verifikasi Mutu Hasil Goreng (QC), Pengemasan Plastik, Update Status Siap Diambil, Input Stok Plastik. |
 
 ---

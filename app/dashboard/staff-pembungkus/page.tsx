@@ -265,9 +265,38 @@ export default function StaffPembungkusDashboardPage() {
                         </span>
                       </div>
 
+<<<<<<< HEAD
                       <div className="font-bold text-gray-900 text-sm">
                         {item.produk?.nama_produk} &bull;{' '}
                         <span className="text-blue-700">{item.pesanan?.jumlah} {item.produk?.satuan || 'Bal'}</span>
+=======
+                      <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.produk?.nama_produk}</h3>
+                      <div className="text-gray-600 mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs sm:text-sm">
+                        <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
+                        <span>Varian: <strong className="text-gray-800">{item.pesanan?.varian_rasa}</strong></span>
+                        <span className="flex items-center gap-1.5">
+                          Kemasan: <strong className="text-blue-700 font-bold">{item.pesanan?.ukuran_plastik}</strong>
+                          {(() => {
+                            const reqUkuran = String(item.pesanan?.ukuran_plastik || '').toLowerCase();
+                            const matchingPlastic = stockList.find(
+                              (s) => s.kategori === 'Plastik' && s.nama_bahan.toLowerCase().includes(reqUkuran)
+                            );
+                            if (!matchingPlastic || (matchingPlastic.jumlah || 0) <= 0) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full animate-pulse">
+                                  ⚠ Stok Plastik Kosong di Gudang!
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                ✓ Plastik Ready ({matchingPlastic.jumlah} {matchingPlastic.satuan})
+                              </span>
+                            );
+                          })()}
+                        </span>
+                        <span>Pelanggan: <strong className="text-gray-800">{item.pesanan?.pelanggan?.nama_lengkap || '-'}</strong></span>
+>>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                       </div>
 
                       <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-600">
