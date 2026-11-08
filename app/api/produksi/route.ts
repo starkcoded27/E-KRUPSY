@@ -32,9 +32,14 @@ export async function GET() {
     return NextResponse.json({ message: 'Gagal memuat antrean produksi: ' + error.message }, { status: 500 });
   }
 
-  setCached('api:produksi', data);
+  // Filter ketat: Hanya tampilkan produksi pesanan aktif (bukan yang telah dibatalkan pelanggan)
+  const activeProduction = (data || []).filter(
+    (item: any) => item.pesanan && item.pesanan.status_pesanan !== 'dibatalkan'
+  );
 
-  return NextResponse.json({ success: true, data });
+  setCached('api:produksi', activeProduction);
+
+  return NextResponse.json({ success: true, data: activeProduction });
 }
 
 export async function PATCH(req: NextRequest) {

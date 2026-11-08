@@ -6,10 +6,14 @@
 
 // Tarif Tambahan Bumbu / Varian Rasa (per Bal)
 export const HARGA_BUMBU: Record<string, number> = {
-  Original: 50000,
-  Pedas: 50000,
-  Balado: 40000,
-  Keju: 36000,
+  'Original': 50000,
+  'Original Gurih': 50000,
+  'Pedas': 50000,
+  'Pedas Level 5': 50000,
+  'Balado': 40000,
+  'Balado Manis Pedas': 40000,
+  'Keju': 36000,
+  'Keju Asin Gurih': 36000,
 };
 
 // Tarif Tambahan Kemasan Plastik (per Bal)
@@ -33,13 +37,26 @@ export const DAFTAR_PLASTIK_OPTIONS = [
   { id: '12x25 kg', label: 'Kemasan Plastik 12x25 kg', harga: 34000 },
 ];
 
-// Daftar Opsi Varian Rasa Standar Pabrik
+// Daftar Opsi Varian Rasa Standar Pabrik (Menggunakan Nama Lengkap Resmi)
 export const DAFTAR_VARIAN_OPTIONS = [
-  { id: 'Original', label: 'Original Gurih', harga: 50000 },
-  { id: 'Balado', label: 'Balado Manis Pedas', harga: 40000 },
-  { id: 'Pedas', label: 'Pedas Level 5', harga: 50000 },
-  { id: 'Keju', label: 'Keju Asin Gurih', harga: 36000 },
+  { id: 'Original Gurih', label: 'Original Gurih', harga: 50000 },
+  { id: 'Balado Manis Pedas', label: 'Balado Manis Pedas', harga: 40000 },
+  { id: 'Pedas Level 5', label: 'Pedas Level 5', harga: 50000 },
+  { id: 'Keju Asin Gurih', label: 'Keju Asin Gurih', harga: 36000 },
 ];
+
+/**
+ * Normalisasi format varian rasa ke nama lengkap resmi (misal: "Balado" -> "Balado Manis Pedas")
+ */
+export function formatVarianRasa(varian?: string): string {
+  if (!varian) return 'Original Gurih';
+  const clean = varian.trim().toLowerCase();
+  if (clean === 'balado' || clean.includes('balado')) return 'Balado Manis Pedas';
+  if (clean === 'pedas' || clean.includes('pedas')) return 'Pedas Level 5';
+  if (clean === 'keju' || clean.includes('keju')) return 'Keju Asin Gurih';
+  if (clean === 'original' || clean.includes('original')) return 'Original Gurih';
+  return varian;
+}
 
 /**
  * Mengambil harga tambahan bumbu berdasarkan nama varian rasa

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
 import { deductAllMaterialsOnOrder } from '@/lib/stock-sync';
-import { getHargaBumbu, getHargaPlastik } from '@/lib/pricing';
+import { getHargaBumbu, getHargaPlastik, formatVarianRasa } from '@/lib/pricing';
 import { getCached, setCached, invalidateCache } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       for (const it of items) {
         const pId = Number(it.id_produk);
         const qty = Number(it.jumlah) || 1;
-        const rasa = it.varian_rasa || 'Original';
+        const rasa = formatVarianRasa(it.varian_rasa || 'Original Gurih');
         const plastik = it.ukuran_plastik || '1/2 kg';
         const prod = prodMap.get(pId)!;
 
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
         label: 'Varian Rasa', 
         value: varian_rasa, 
         required: true, 
-        domain: { allowedValues: ['Original', 'Balado', 'Pedas', 'Keju'] } 
+        domain: { allowedValues: ['Original', 'Original Gurih', 'Balado', 'Balado Manis Pedas', 'Pedas', 'Pedas Level 5', 'Keju', 'Keju Asin Gurih'] } 
       },
       { 
         field: 'ukuran_plastik', 
@@ -233,6 +233,9 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Normalisasi varian rasa ke nama lengkap resmi (misal 'Balado' -> 'Balado Manis Pedas')
+    const cleanVarian = formatVarianRasa(varian_rasa);
+
     // Ambil info produk untuk menghitung total_harga
     const { data: prodData, error: prodErr } = await supabase
       .from('produk')
@@ -254,7 +257,7 @@ export async function POST(req: NextRequest) {
 
     // Kalkulasi total harga gabungan: (Harga Kerupuk + Tambahan Bumbu + Tambahan Plastik) * Qty
     const hargaKerupukSatuan = Number(prodData.harga) || 0;
-    const hargaBumbu = getHargaBumbu(varian_rasa);
+    const hargaBumbu = getHargaBumbu(cleanVarian);
     const hargaPlastik = getHargaPlastik(ukuran_plastik);
     const hargaPerBal = hargaKerupukSatuan + hargaBumbu + hargaPlastik;
     const totalHarga = hargaPerBal * qty;
@@ -266,7 +269,7 @@ export async function POST(req: NextRequest) {
         id_pelanggan: Number(id_pelanggan),
         id_produk: Number(id_produk),
         jumlah: qty,
-        varian_rasa,
+        varian_rasa: cleanVarian,
         ukuran_plastik,
         total_harga: totalHarga,
         status_pesanan: 'menunggu_diproses',
@@ -321,7 +324,7 @@ export async function POST(req: NextRequest) {
       supabase,
       prodData.nama_produk,
       qty,
-      varian_rasa,
+      cleanVarian,
       ukuran_plastik
     );
 
@@ -329,7 +332,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Pesanan ${qty} Bal ${prodData.nama_produk} berhasil dibuat! Stok produk, bumbu (${varian_rasa}), dan kemasan plastik (${ukuran_plastik}) telah otomatis terpotong.`,
+      message: `Pesanan ${qty} Bal ${prodData.nama_produk} berhasil dibuat! Stok produk, bumbu (${cleanVarian}), dan kemasan plastik (${ukuran_plastik}) telah otomatis terpotong.`,
       data: orderData,
       deductInfo,
     });

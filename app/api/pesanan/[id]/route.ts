@@ -42,13 +42,25 @@ export async function PATCH(
         }, { status: 400 });
       }
 
-      // Update status pesanan jadi dibatalkan
+      // 1. Update status pesanan jadi dibatalkan
       await supabase
         .from('pesanan')
         .update({ status_pesanan: 'dibatalkan' })
         .eq('id_pesanan', orderId);
 
-      // Kembalikan stok produk di katalog dan kembalikan stok bahan mentah, bumbu, & plastik di gudang
+      // 2. Update status pembayaran jadi gagal/dibatalkan
+      await supabase
+        .from('pembayaran')
+        .update({ status_pembayaran: 'gagal' })
+        .eq('id_pesanan', orderId);
+
+      // 3. Hapus antrean produksi agar langsung terhapus dari antrean Staf Penggoreng & Pembungkus
+      await supabase
+        .from('produksi')
+        .delete()
+        .eq('id_pesanan', orderId);
+
+      // 4. Kembalikan stok produk di katalog dan kembalikan stok bahan mentah, bumbu, & plastik di gudang
       if (order.id_produk && order.produk) {
         await supabase
           .from('produk')
