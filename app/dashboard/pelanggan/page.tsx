@@ -1014,7 +1014,7 @@ export default function PelangganDashboardPage() {
 
     <RoleGuard allowedRoles={['pelanggan']} pageTitle="Dashboard Pelanggan">
 
-      <div className="space-y-6">
+      <div className={`space-y-6 ${qrisReceiptData ? 'print:hidden' : ''}`}>
 
         {/* Welcome Banner */}
 
@@ -2550,7 +2550,7 @@ export default function PelangganDashboardPage() {
 
         {qrisModalOrder && (
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn print:hidden">
 
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative max-h-[92vh] overflow-y-auto">
 
@@ -3314,6 +3314,154 @@ export default function PelangganDashboardPage() {
 
       </div>
 
+    
+      {/* DOKUMEN CETAK RESMI STRUK PEMBAYARAN QRIS (PRINT PREVIEW 1 HALAMAN CENTER PENUH) */}
+      {qrisReceiptData && (
+        <div className="hidden print:block print:w-full print:m-0 print:p-0">
+          <div className="print-receipt-fullpage">
+            {/* Bagian Atas: KOP RESMI PABRIK KERUPUK DIANSYAH */}
+            <div>
+              <div className="text-center pb-4 border-b-2 border-gray-900">
+                <div className="flex items-center justify-center gap-3 mb-1">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-2xl flex items-center justify-center shadow">
+                    KD
+                  </div>
+                  <div className="text-left">
+                    <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">Pabrik Kerupuk Diansyah</h2>
+                    <p className="text-xs text-gray-600 font-medium">Spesialis Kerupuk Gurih & Renyah Berkualitas Tinggi &bull; Sumedang</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang &bull; Telp / WA: 0895-2578-3995
+                </p>
+                <div className="mt-2.5 inline-block px-4 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-400 uppercase tracking-wider">
+                  ✓ STRUK RESMI PEMBAYARAN QRIS (LUNAS)
+                </div>
+              </div>
+
+              {/* Grid 2 Kolom Info Transaksi QRIS & Info Pelanggan */}
+              <div className="grid grid-cols-2 gap-4 py-4 border-b border-dashed border-gray-300 text-xs">
+                <div className="space-y-1.5">
+                  <div className="flex">
+                    <span className="text-gray-500 w-36">Ref ID QRIS:</span>
+                    <span className="font-mono font-bold text-gray-900">{qrisReceiptData.ref_id}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-36">Nomor Transaksi:</span>
+                    <span className="font-mono font-bold text-gray-900">TRX-KD-{qrisReceiptData.orderId}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-36">Waktu Bayar:</span>
+                    <span className="font-semibold text-gray-800">{qrisReceiptData.paidAt}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-36">Metode Pembayaran:</span>
+                    <span className="font-bold uppercase text-brand-maroon">
+                      QRIS Instan (Standar Pembayaran Nasional)
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1.5 pl-4">
+                  <div className="flex">
+                    <span className="text-gray-500 w-32">Nama Pembeli:</span>
+                    <span className="font-bold text-gray-900">{qrisReceiptData.customerName}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-32">Tujuan Dana:</span>
+                    <span className="font-semibold text-emerald-800">{qrisReceiptData.destination}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-32">Status Transaksi:</span>
+                    <span className="font-bold text-emerald-700">✓ LUNAS OTOMATIS</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bagian Tengah: Tabel Rincian Produk & Total Pembayaran & Status */}
+            <div className="my-auto py-3">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-gray-300 bg-gray-50 text-gray-700 font-bold">
+                    <th className="py-2.5 px-3 text-center w-12">No</th>
+                    <th className="py-2.5 px-3">Produk & Varian Rasa</th>
+                    <th className="py-2.5 px-3 text-center">Ukuran Kemasan</th>
+                    <th className="py-2.5 px-3 text-center">Jumlah (Qty)</th>
+                    <th className="py-2.5 px-3 text-right">Total Tagihan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="py-3 px-3 text-center font-bold text-gray-600">1</td>
+                    <td className="py-3 px-3">
+                      <span className="font-bold text-gray-900 text-sm block">
+                        {qrisReceiptData.productName}
+                      </span>
+                      <span className="text-[11px] text-gray-500 font-medium">
+                        Varian: {qrisReceiptData.varian}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-center font-medium text-gray-700">
+                      {qrisReceiptData.kemasan}
+                    </td>
+                    <td className="py-3 px-3 text-center font-bold text-gray-900">
+                      {qrisReceiptData.qty} {qrisReceiptData.satuan}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono font-bold text-gray-900 text-sm">
+                      Rp {Number(qrisReceiptData.amount).toLocaleString('id-ID')}
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-800 bg-gray-50 font-black text-sm">
+                    <td colSpan={4} className="py-3 px-4 text-right uppercase tracking-wider text-gray-900">
+                      TOTAL PEMBAYARAN LUNAS:
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-base text-brand-maroon">
+                      Rp {Number(qrisReceiptData.amount).toLocaleString('id-ID')}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              {/* Status Lunas Box */}
+              <div className="py-3 px-4 bg-emerald-50/60 border border-emerald-200 rounded-xl my-4 text-center">
+                <p className="text-xs text-emerald-900 font-bold">
+                  Status Pembayaran: <span className="text-emerald-700 font-black">✓ LUNAS (Kas Telah Diterima & Diverifikasi Sistem/Owner)</span>
+                </p>
+                <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                  Dana telah berhasil dibayarkan melalui QRIS Pabrik Kerupuk Diansyah. Struk ini resmi dan sah untuk ditunjukkan saat pengambilan barang.
+                </p>
+              </div>
+            </div>
+
+            {/* Bagian Bawah: Tanda Tangan Resmi Pengesahan Resi */}
+            <div>
+              <div className="pt-2 flex justify-between items-end text-xs text-gray-700">
+                <div className="text-center w-52">
+                  <p className="font-semibold text-gray-600 mb-14">Tanda Terima Pelanggan,</p>
+                  <p className="font-bold text-gray-900 border-t border-gray-400 pt-1">
+                    ( {qrisReceiptData.customerName || 'Pelanggan'} )
+                  </p>
+                </div>
+                <div className="text-center w-56">
+                  <p className="text-gray-500 text-[10px] mb-1">
+                    Sumedang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="font-semibold text-gray-600 mb-14">Owner / Kasir Pabrik,</p>
+                  <p className="font-bold text-gray-900 border-t border-gray-800 pt-1">
+                    ( Bapak Diansyah )
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[10px] text-gray-400">
+                Dokumen bukti transaksi pembayaran QRIS diterbitkan secara otomatis oleh Sistem Informasi E-KRUPSY &bull; Pabrik Kerupuk Diansyah
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </RoleGuard>
 
   );
