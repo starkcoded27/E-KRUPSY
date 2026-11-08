@@ -1,36 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { generateChartData } from '@/lib/chart-data';
+import { getCached, setCached } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
+  // 1. Cek Server-Side In-Memory Cache (TTL 4 detik) untuk respons instan (< 5ms)
+  const cached = getCached('api:laporan', 4000);
+  if (cached) {
+    return NextResponse.json({ success: true, data: cached });
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
   }
 
   try {
-    // 1. Ambil semua pesanan dengan relasi
-    const { data: pesananList, error: orderErr } = await supabase
-      .from('pesanan')
-      .select(`
-        *,
-        produk:id_produk (*),
-        pelanggan:id_pelanggan (*),
-        pembayaran (*),
-        produksi (*, verifikasi:verifikasi_produksi (*))
-      `)
-      .order('id_pesanan', { ascending: false });
+    // 2. Eksekusi 4 query database secara PARALEL dengan Promise.all
+    const [pesananRes, rawStockRes, pelangganRes, produkRes] = await Promise.all([
+      supabase
+        .from('pesanan')
+        .select(`
+          *,
+          produk:id_produk (*),
+          pelanggan:id_pelanggan (*),
+          pembayaran (*),
+          produksi (*, verifikasi:verifikasi_produksi (*))
+        `)
+        .order('id_pesanan', { ascending: false }),
+      supabase
+        .from('stok_bahan')
+        .select('*')
+        .order('kategori', { ascending: true })
+        .order('nama_bahan', { ascending: true }),
+      supabase
+        .from('pelanggan')
+        .select('*')
+        .order('id_pelanggan', { ascending: false }),
+      supabase
+        .from('produk')
+        .select('*')
+        .order('id_produk', { ascending: true }),
+    ]);
 
-    console.log('[API LAPORAN] Raw pesanan from DB:', pesananList?.length, 'error:', orderErr);
-
-    if (orderErr) {
-      return NextResponse.json({ message: 'Gagal mengambil data laporan: ' + orderErr.message }, { status: 500 });
+    if (pesananRes.error) {
+      return NextResponse.json({ message: 'Gagal mengambil data laporan: ' + pesananRes.error.message }, { status: 500 });
     }
 
-    const orders = pesananList || [];
+    const orders: any[] = pesananRes.data || [];
 
     // 1. Filter yang tidak dibatalkan untuk perhitungan omset
     const validOrders = orders.filter((o) => o.status_pesanan !== 'dibatalkan');
@@ -83,37 +103,22 @@ export async function GET(req: NextRequest) {
 
     const produkBreakdown = Object.values(produkMap).sort((a, b) => b.total - a.total);
 
-    // Ambil rekap stok bahan baku (Hanya Kerupuk Mentah, Bumbu, & Plastik, Bebas Minyak)
-    const { data: rawStockList } = await supabase
-      .from('stok_bahan')
-      .select('*')
-      .order('kategori', { ascending: true })
-      .order('nama_bahan', { ascending: true });
-
-    const stockList = (rawStockList || []).filter(
-      (s) => !s.nama_bahan.toLowerCase().includes('minyak')
+    // Filter stok bahan baku (Hanya Kerupuk Mentah, Bumbu, & Plastik, Bebas Minyak)
+    const stockList = (rawStockRes.data || []).filter(
+      (s: any) => !s.nama_bahan.toLowerCase().includes('minyak')
     );
 
-    // Ambil seluruh data master pelanggan terdaftar
-    const { data: pelangganList } = await supabase
-      .from('pelanggan')
-      .select('*')
-      .order('id_pelanggan', { ascending: false });
-
-    // Ambil seluruh katalog produk pabrik & hitung jumlah terjual
-    const { data: produkList } = await supabase
-      .from('produk')
-      .select('*')
-      .order('id_produk', { ascending: true });
+    const pelangganList = pelangganRes.data || [];
+    const produkList = produkRes.data || [];
 
     const soldMap: Record<number, number> = {};
-    validOrders.forEach((o) => {
+    validOrders.forEach((o: any) => {
       if (o.id_produk) {
         soldMap[o.id_produk] = (soldMap[o.id_produk] || 0) + (Number(o.jumlah) || 0);
       }
     });
 
-    const enrichedProdukList = (produkList || []).map((prod) => ({
+    const enrichedProdukList = produkList.map((prod: any) => ({
       ...prod,
       terjual: (soldMap[prod.id_produk] || 0) + (Number(prod.terjual) || 0),
     }));
@@ -121,25 +126,30 @@ export async function GET(req: NextRequest) {
     // Perhitungan Data Diagram Omset Keuangan (Harian, Mingguan, Bulanan, Tahunan)
     const chartData = generateChartData(validOrders);
 
+    const resultData = {
+      totalOmset,
+      totalKasMasuk,
+      totalPiutang,
+      estimasiHPP,
+      estimasiKeuntungan,
+      totalTransaksi: orders.length,
+      totalSelesai: completedOrders.length,
+      totalProses: inProgressOrders.length,
+      orders,
+      pelangganList,
+      produkList: enrichedProdukList,
+      rekapMetode,
+      produkBreakdown,
+      stockList,
+      chartData,
+    };
+
+    // Simpan ke memory cache
+    setCached('api:laporan', resultData);
+
     return NextResponse.json({
       success: true,
-      data: {
-        totalOmset,
-        totalKasMasuk,
-        totalPiutang,
-        estimasiHPP,
-        estimasiKeuntungan,
-        totalTransaksi: orders.length,
-        totalSelesai: completedOrders.length,
-        totalProses: inProgressOrders.length,
-        orders,
-        pelangganList: pelangganList || [],
-        produkList: enrichedProdukList,
-        rekapMetode,
-        produkBreakdown,
-        stockList,
-        chartData,
-      },
+      data: resultData,
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',

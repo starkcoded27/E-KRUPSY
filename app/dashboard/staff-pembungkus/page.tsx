@@ -77,8 +77,11 @@ export default function StaffPembungkusDashboardPage() {
   const [showPlasticModal, setShowPlasticModal] = useState(false);
   const [namaPlastik, setNamaPlastik] = useState('Plastik Ukuran 1/2 kg');
   const [jumlahPlastik, setJumlahPlastik] = useState<number>(20);
+  const isFetchingRef = React.useRef(false);
 
   const fetchData = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsLoading(true);
     try {
       const [resProd, resStock] = await Promise.all([
@@ -86,14 +89,17 @@ export default function StaffPembungkusDashboardPage() {
         fetch('/api/stok'),
       ]);
 
-      const dataProd = await resProd.json();
-      const dataStock = await resStock.json();
+      const [dataProd, dataStock] = await Promise.all([
+        resProd.json(),
+        resStock.json(),
+      ]);
 
       if (resProd.ok) setProductionList(dataProd.data || []);
       if (resStock.ok) setStockList(dataStock.data || []);
     } catch (err: any) {
       if (!silent) console.error('Fetch error pembungkus:', err);
     } finally {
+      isFetchingRef.current = false;
       if (!silent) setIsLoading(false);
     }
   };
@@ -101,12 +107,23 @@ export default function StaffPembungkusDashboardPage() {
   useEffect(() => {
     fetchData();
 
-    // Auto-update live real-time antrean kemas tanpa perlu refresh manual
+    // Auto-update live real-time antrean kemas yang aman tanpa request stacking
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchData(true);
-    }, 2500);
+    }, 8000);
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Submit QC Verifikasi (UC-10) dengan 4 Validasi Input

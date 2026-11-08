@@ -5,6 +5,7 @@ import {
   syncRawMaterialToProductCatalog, 
   KG_PER_BAL 
 } from '@/lib/stock-sync';
+import { getCached, setCached, invalidateCache } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,11 @@ export const dynamic = 'force-dynamic';
  * Menampilkan daftar seluruh stok bahan baku (Hanya Kerupuk Mentah, Bumbu, & Plastik)
  */
 export async function GET() {
+  const cached = getCached('api:stok', 4000);
+  if (cached) {
+    return NextResponse.json({ success: true, data: cached });
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
@@ -30,8 +36,10 @@ export async function GET() {
 
   // Filter ketat: Pastikan tidak ada stok minyak goreng yang tampil
   const filteredData = (data || []).filter(
-    (item) => !item.nama_bahan.toLowerCase().includes('minyak')
+    (item: any) => !item.nama_bahan.toLowerCase().includes('minyak')
   );
+
+  setCached('api:stok', filteredData);
 
   return NextResponse.json({ success: true, data: filteredData });
 }
@@ -139,6 +147,8 @@ export async function POST(req: NextRequest) {
         ? ` (Otomatis menambah +${balAdded} Bal di katalog Owner)`
         : '';
 
+      invalidateCache();
+
       return NextResponse.json({
         success: true,
         message: `Stok "${cleanNama}" berhasil ditambahkan (+${inputJumlah} ${existingItem.satuan}). Total sekarang: ${updatedTotal} ${existingItem.satuan}.${syncInfo}`,
@@ -173,6 +183,8 @@ export async function POST(req: NextRequest) {
     const syncInfo = cleanKat === 'Kerupuk Mentah' && balAdded > 0
       ? ` (Otomatis terkonversi +${balAdded} Bal di katalog Owner)`
       : '';
+
+    invalidateCache();
 
     return NextResponse.json({
       success: true,
@@ -230,6 +242,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ message: 'Gagal mengedit stok: ' + error.message }, { status: 500 });
     }
 
+    invalidateCache();
+
     return NextResponse.json({
       success: true,
       message: `Data stok "${updated.nama_bahan}" berhasil diperbarui. Total stok saat ini: ${updated.jumlah} ${updated.satuan}.`,
@@ -276,6 +290,8 @@ export async function DELETE(req: NextRequest) {
     if (error) {
       return NextResponse.json({ message: 'Gagal menghapus data stok: ' + error.message }, { status: 500 });
     }
+
+    invalidateCache();
 
     return NextResponse.json({
       success: true,

@@ -3,17 +3,24 @@ import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
 import { deductAllMaterialsOnOrder } from '@/lib/stock-sync';
 import { getHargaBumbu, getHargaPlastik } from '@/lib/pricing';
+import { getCached, setCached, invalidateCache } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const idPelanggan = searchParams.get('id_pelanggan');
+
+  const cacheKey = idPelanggan ? `api:pesanan:${idPelanggan}` : 'api:pesanan:all';
+  const cached = getCached(cacheKey, 3000);
+  if (cached) {
+    return NextResponse.json({ success: true, data: cached });
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
   }
-
-  const { searchParams } = new URL(req.url);
-  const idPelanggan = searchParams.get('id_pelanggan');
 
   let query = supabase
     .from('pesanan')
@@ -35,6 +42,8 @@ export async function GET(req: NextRequest) {
   if (error) {
     return NextResponse.json({ message: 'Gagal mengambil data pesanan: ' + error.message }, { status: 500 });
   }
+
+  setCached(cacheKey, data);
 
   return NextResponse.json({ success: true, data });
 }
@@ -74,7 +83,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: 'Gagal memvalidasi katalog produk di database.' }, { status: 500 });
       }
 
-      const prodMap = new Map(prodsData.map((p) => [p.id_produk, p]));
+      const prodMap = new Map<number, any>(prodsData.map((p: any) => [p.id_produk, p]));
 
       // Hitung total akumulasi qty per produk yang dipesan di keranjang
       const requestedQtyMap: Record<number, number> = {};
@@ -169,6 +178,8 @@ export async function POST(req: NextRequest) {
           produk: prod,
         });
       }
+
+      invalidateCache();
 
       return NextResponse.json({
         success: true,
@@ -313,6 +324,8 @@ export async function POST(req: NextRequest) {
       varian_rasa,
       ukuran_plastik
     );
+
+    invalidateCache();
 
     return NextResponse.json({
       success: true,

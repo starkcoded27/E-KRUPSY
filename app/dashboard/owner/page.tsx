@@ -330,8 +330,11 @@ export default function OwnerDashboardPage() {
   // Modal Restock Pasokan Supplier untuk Produk Katalog (Khusus Owner)
   const [selectedProductToRestock, setSelectedProductToRestock] = useState<ProdukCatalogItem | null>(null);
   const [restockBalQty, setRestockBalQty] = useState<number>(10);
+  const isFetchingRef = React.useRef(false);
 
   const fetchLaporan = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsLoading(true);
     try {
       const res = await fetch('/api/laporan', { cache: 'no-store' });
@@ -342,6 +345,7 @@ export default function OwnerDashboardPage() {
     } catch (err: any) {
       if (!silent) console.error('Laporan fetch error:', err);
     } finally {
+      isFetchingRef.current = false;
       if (!silent) setIsLoading(false);
     }
   };
@@ -349,12 +353,23 @@ export default function OwnerDashboardPage() {
   useEffect(() => {
     fetchLaporan();
 
-    // Auto-update laporan, omset, dan antrean transaksi live real-time tanpa reload / refresh manual
+    // Auto-update laporan live real-time aman tanpa menumpuk antrean jaringan
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchLaporan(true);
-    }, 2500);
+    }, 8000);
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchLaporan(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Konfirmasi Pembayaran Tunai (UC-12)

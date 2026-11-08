@@ -66,8 +66,11 @@ export default function StaffPenggorengDashboardPage() {
     type: 'idle',
     message: null,
   });
+  const isFetchingRef = React.useRef(false);
 
   const fetchData = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsLoading(true);
     try {
       const [resProd, resStock] = await Promise.all([
@@ -75,14 +78,17 @@ export default function StaffPenggorengDashboardPage() {
         fetch('/api/stok'),
       ]);
 
-      const dataProd = await resProd.json();
-      const dataStock = await resStock.json();
+      const [dataProd, dataStock] = await Promise.all([
+        resProd.json(),
+        resStock.json(),
+      ]);
 
       if (resProd.ok) setProductionList(dataProd.data || []);
       if (resStock.ok) setStockList(dataStock.data || []);
     } catch (err: any) {
       if (!silent) console.error('Error fetch staff penggoreng:', err);
     } finally {
+      isFetchingRef.current = false;
       if (!silent) setIsLoading(false);
     }
   };
@@ -90,12 +96,23 @@ export default function StaffPenggorengDashboardPage() {
   useEffect(() => {
     fetchData();
 
-    // Auto-update antrean dan stok live real-time tanpa reload / refresh manual
+    // Auto-update live real-time yang aman dan tidak membebani jaringan browser
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchData(true);
-    }, 2500);
+    }, 8000);
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Handler Update Status Produksi

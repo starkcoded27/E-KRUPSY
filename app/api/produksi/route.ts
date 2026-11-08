@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
+import { getCached, setCached, invalidateCache } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const cached = getCached('api:produksi', 4000);
+  if (cached) {
+    return NextResponse.json({ success: true, data: cached });
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
@@ -25,6 +31,8 @@ export async function GET() {
   if (error) {
     return NextResponse.json({ message: 'Gagal memuat antrean produksi: ' + error.message }, { status: 500 });
   }
+
+  setCached('api:produksi', data);
 
   return NextResponse.json({ success: true, data });
 }
@@ -69,6 +77,8 @@ export async function PATCH(req: NextRequest) {
           .eq('id_pesanan', Number(id_pesanan));
       }
     }
+
+    invalidateCache();
 
     return NextResponse.json({
       success: true,

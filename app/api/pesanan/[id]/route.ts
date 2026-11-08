@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { refundAllMaterialsOnCancel } from '@/lib/stock-sync';
+import { invalidateCache } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,8 @@ export async function PATCH(
         );
       }
 
+      invalidateCache();
+
       return NextResponse.json({
         success: true,
         message: 'Pesanan berhasil dibatalkan dan seluruh stok kerupuk, bumbu, dan plastik telah otomatis dikembalikan.',
@@ -96,6 +99,8 @@ export async function PATCH(
       if (payErr) {
         return NextResponse.json({ message: 'Gagal memproses pelunasan QRIS: ' + payErr.message }, { status: 500 });
       }
+
+      invalidateCache();
 
       return NextResponse.json({
         success: true,
@@ -132,6 +137,8 @@ export async function PATCH(
         return NextResponse.json({ message: 'Gagal mengunggah bukti transfer: ' + payErr.message }, { status: 500 });
       }
 
+      invalidateCache();
+
       return NextResponse.json({
         success: true,
         message: 'Bukti transfer berhasil dikirim ke Owner. Menunggu validasi pelunasan dari Owner.',
@@ -148,6 +155,8 @@ export async function PATCH(
       if (payErr) {
         return NextResponse.json({ message: 'Gagal memperbarui status pembayaran: ' + payErr.message }, { status: 500 });
       }
+
+      invalidateCache();
 
       return NextResponse.json({
         success: true,

@@ -268,97 +268,72 @@ export default function PelangganDashboardPage() {
   });
 
   const [isLoadingData, setIsLoadingData] = useState(true);
-
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const isFetchingRef = React.useRef(false);
 
-
-
-  // Fetch data dari Supabase
-
+  // Fetch data dari Supabase secara PARALEL
   const fetchData = async (silent = false) => {
-
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsLoadingData(true);
 
     try {
+      const orderUrl = pelanggan?.id_pelanggan
+        ? `/api/pesanan?id_pelanggan=${pelanggan.id_pelanggan}`
+        : null;
 
-      // 1. Fetch katalog produk
+      const [resProd, resOrder, resStock] = await Promise.all([
+        fetch('/api/produk'),
+        orderUrl ? fetch(orderUrl) : Promise.resolve(null),
+        fetch('/api/stok'),
+      ]);
 
-      const resProd = await fetch('/api/produk');
-
-      const dataProd = await resProd.json();
+      const [dataProd, dataOrder, dataStock] = await Promise.all([
+        resProd.json(),
+        resOrder ? resOrder.json() : Promise.resolve({ data: [] }),
+        resStock.json(),
+      ]);
 
       if (resProd.ok) {
-
         setProdukList(dataProd.data || []);
-
       }
 
-
-
-      // 2. Fetch pesanan pelanggan
-
-      if (pelanggan?.id_pelanggan) {
-
-        const resOrder = await fetch(`/api/pesanan?id_pelanggan=${pelanggan.id_pelanggan}`);
-
-        const dataOrder = await resOrder.json();
-
-        if (resOrder.ok) {
-
-          setPesananList(dataOrder.data || []);
-
-        }
-
+      if (resOrder && resOrder.ok) {
+        setPesananList(dataOrder.data || []);
       }
-
-
-
-      // 3. Fetch stok kemasan plastik di gudang pembungkusan
-
-      const resStock = await fetch('/api/stok');
-
-      const dataStock = await resStock.json();
 
       if (resStock.ok && Array.isArray(dataStock.data)) {
-
         const plastics = dataStock.data.filter((s: any) => s.kategori === 'Plastik');
-
         setPlastikList(plastics);
-
       }
-
     } catch (err: any) {
-
       if (!silent) console.error('Fetch error:', err);
-
     } finally {
-
+      isFetchingRef.current = false;
       if (!silent) setIsLoadingData(false);
-
     }
-
   };
 
-
-
   useEffect(() => {
-
     fetchData();
 
-
-
-    // Auto-update live real-time tanpa perlu refresh manual (setiap 2.5 detik)
-
+    // Auto-update real-time yang aman dan tidak membebani jaringan browser
     const interval = setInterval(() => {
-
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchData(true);
+    }, 8000);
 
-    }, 2500);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
-
-
-    return () => clearInterval(interval);
-
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [pelanggan]);
 
   // Load keranjang belanja dari localStorage saat pertama kali dimuat
