@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
-import { refundRawMaterialOnCancel } from '@/lib/stock-sync';
+import { refundAllMaterialsOnCancel } from '@/lib/stock-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,19 +47,25 @@ export async function PATCH(
         .update({ status_pesanan: 'dibatalkan' })
         .eq('id_pesanan', orderId);
 
-      // Kembalikan stok produk di katalog dan kembalikan stok bahan mentah di dapur
+      // Kembalikan stok produk di katalog dan kembalikan stok bahan mentah, bumbu, & plastik di gudang
       if (order.id_produk && order.produk) {
         await supabase
           .from('produk')
           .update({ stok: order.produk.stok + order.jumlah })
           .eq('id_produk', order.id_produk);
 
-        await refundRawMaterialOnCancel(supabase, order.produk.nama_produk, order.jumlah);
+        await refundAllMaterialsOnCancel(
+          supabase,
+          order.produk.nama_produk,
+          order.jumlah,
+          order.varian_rasa || 'Original',
+          order.ukuran_plastik || '1/2 kg'
+        );
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Pesanan berhasil dibatalkan dan stok produk telah dikembalikan.',
+        message: 'Pesanan berhasil dibatalkan dan seluruh stok kerupuk, bumbu, dan plastik telah otomatis dikembalikan.',
       });
     }
 

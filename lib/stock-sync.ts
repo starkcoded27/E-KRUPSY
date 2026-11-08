@@ -4,6 +4,11 @@ import { SupabaseClient } from '@supabase/supabase-js';
 // 1 Bal kerupuk matang mekar membutuhkan 5 Kg kerupuk mentah.
 export const KG_PER_BAL = 5;
 
+// Rasio Bahan Tambahan per 1 Bal:
+// 1 Bal kerupuk membutuhkan 1 Kg bumbu tabur dan 1 Pack plastik kemasan.
+export const KG_BUMBU_PER_BAL = 1;
+export const PACK_PLASTIK_PER_BAL = 1;
+
 /**
  * Konversi nama produk siap jual (Katalog Owner) ke nama bahan mentah (Dapur Penggoreng)
  * Contoh: "Kerupuk Kentang" -> "Kerupuk Mentah Kentang"
@@ -40,75 +45,292 @@ export function bahanToProductName(namaBahan: string): string {
 }
 
 /**
- * Sinkronisasi pemotongan stok bahan mentah saat pelanggan memesan kerupuk goreng dadakan
+ * Konversi varian rasa pesanan ke nama bahan bumbu di tabel stok_bahan
  */
-export async function deductRawMaterialOnOrder(
+export function varianToBumbuName(varian: string): string {
+  const clean = String(varian || '').toLowerCase();
+  if (clean.includes('balado')) return 'Bumbu Balado Super';
+  if (clean.includes('pedas')) return 'Bumbu Pedas Manis';
+  if (clean.includes('keju')) return 'Bumbu Rasa Keju';
+  return 'Bumbu Rasa Original';
+}
+
+/**
+ * Konversi ukuran plastik ke nama bahan di stok_bahan
+ * Contoh: "1/2 kg" -> "Plastik Ukuran 1/2 kg"
+ */
+export function ukuranToPlastikBahanName(ukuran: string): string {
+  const clean = String(ukuran || '').trim();
+  if (!clean) return 'Plastik Ukuran 1/2 kg';
+  if (clean.toLowerCase().startsWith('plastik ukuran ')) return clean;
+  return `Plastik Ukuran ${clean}`;
+}
+
+/**
+ * SINKRONISASI OTOMATIS PEMOTONGAN STOK SAAT PELANGGAN MEMBELI PESANAN:
+ * - Stok Kerupuk Mentah terpotong otomatis (5 Kg per Bal)
+ * - Stok Bumbu terpotong otomatis sesuai varian rasa (1 Kg per Bal)
+ * - Stok Plastik Kemasan terpotong otomatis sesuai ukuran kemasan (1 Pack per Bal)
+ * Penggoreng dan Pembungkus tidak perlu memotong secara manual!
+ */
+export async function deductAllMaterialsOnOrder(
   supabase: SupabaseClient,
   namaProduk: string,
-  qtyBal: number
+  qtyBal: number,
+  varianRasa: string = 'Original',
+  ukuranPlastik: string = '1/2 kg'
 ) {
-  try {
-    const bahanName = productToBahanName(namaProduk);
-    const kgNeeded = Number(qtyBal) * KG_PER_BAL;
+  const qty = Math.max(1, Number(qtyBal) || 1);
+  const now = new Date().toISOString().split('T')[0];
+  const results = {
+    kerupuk: { success: false, name: '', amount: 0, sisa: 0 },
+    bumbu: { success: false, name: '', amount: 0, sisa: 0 },
+    plastik: { success: false, name: '', amount: 0, sisa: 0 },
+  };
 
-    const { data: rawItem } = await supabase
+  try {
+    // 1. Potong Stok Kerupuk Mentah (5 Kg per Bal)
+    const targetKerupuk = productToBahanName(namaProduk);
+    const kgKerupukNeeded = qty * KG_PER_BAL;
+
+    // Cari exact match dulu, lalu fallback ke ilike
+    let { data: rawKerupuk } = await supabase
       .from('stok_bahan')
-      .select('id_stok, jumlah')
-      .ilike('nama_bahan', bahanName)
+      .select('id_stok, jumlah, nama_bahan')
+      .eq('nama_bahan', targetKerupuk)
+      .eq('kategori', 'Kerupuk Mentah')
+      .limit(1)
       .maybeSingle();
 
-    if (rawItem) {
-      const newJumlah = Math.max(0, (rawItem.jumlah || 0) - kgNeeded);
+    if (!rawKerupuk) {
+      const { data: fallbackKerupuk } = await supabase
+        .from('stok_bahan')
+        .select('id_stok, jumlah, nama_bahan')
+        .ilike('nama_bahan', `%${namaProduk.replace(/^kerupuk\s*/i, '').trim()}%`)
+        .eq('kategori', 'Kerupuk Mentah')
+        .limit(1)
+        .maybeSingle();
+      rawKerupuk = fallbackKerupuk;
+    }
+
+    if (rawKerupuk) {
+      const newJumlah = Math.max(0, (rawKerupuk.jumlah || 0) - kgKerupukNeeded);
       await supabase
         .from('stok_bahan')
-        .update({
-          jumlah: newJumlah,
-          tanggal_update: new Date().toISOString().split('T')[0],
-        })
-        .eq('id_stok', rawItem.id_stok);
-      console.log(`[STOK SYNC] Potong ${kgNeeded} Kg ${bahanName} untuk order ${qtyBal} Bal. Sisa: ${newJumlah} Kg.`);
+        .update({ jumlah: newJumlah, tanggal_update: now })
+        .eq('id_stok', rawKerupuk.id_stok);
+
+      results.kerupuk = {
+        success: true,
+        name: rawKerupuk.nama_bahan,
+        amount: kgKerupukNeeded,
+        sisa: newJumlah,
+      };
+      console.log(`[AUTO-STOK] Potong Kerupuk Mentah: -${kgKerupukNeeded} Kg (${rawKerupuk.nama_bahan}). Sisa: ${newJumlah} Kg.`);
+    }
+
+    // 2. Potong Stok Bumbu Tabur Sesuai Varian Rasa (1 Kg per Bal)
+    const targetBumbu = varianToBumbuName(varianRasa);
+    const kgBumbuNeeded = qty * KG_BUMBU_PER_BAL;
+
+    let { data: rawBumbu } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah, nama_bahan')
+      .eq('nama_bahan', targetBumbu)
+      .eq('kategori', 'Bumbu')
+      .limit(1)
+      .maybeSingle();
+
+    if (!rawBumbu) {
+      const { data: fallbackBumbu } = await supabase
+        .from('stok_bahan')
+        .select('id_stok, jumlah, nama_bahan')
+        .ilike('nama_bahan', `%${varianRasa.trim()}%`)
+        .eq('kategori', 'Bumbu')
+        .limit(1)
+        .maybeSingle();
+      rawBumbu = fallbackBumbu;
+    }
+
+    if (rawBumbu) {
+      const newJumlahBumbu = Math.max(0, (rawBumbu.jumlah || 0) - kgBumbuNeeded);
+      await supabase
+        .from('stok_bahan')
+        .update({ jumlah: newJumlahBumbu, tanggal_update: now })
+        .eq('id_stok', rawBumbu.id_stok);
+
+      results.bumbu = {
+        success: true,
+        name: rawBumbu.nama_bahan,
+        amount: kgBumbuNeeded,
+        sisa: newJumlahBumbu,
+      };
+      console.log(`[AUTO-STOK] Potong Bumbu: -${kgBumbuNeeded} Kg (${rawBumbu.nama_bahan}). Sisa: ${newJumlahBumbu} Kg.`);
+    }
+
+    // 3. Potong Stok Plastik Sesuai Ukuran Kemasan (1 Pack per Bal)
+    const targetPlastik = ukuranToPlastikBahanName(ukuranPlastik);
+    const packPlastikNeeded = qty * PACK_PLASTIK_PER_BAL;
+
+    let { data: rawPlastik } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah, nama_bahan')
+      .eq('nama_bahan', targetPlastik)
+      .eq('kategori', 'Plastik')
+      .limit(1)
+      .maybeSingle();
+
+    if (!rawPlastik) {
+      const cleanUkuran = ukuranPlastik.replace(/^(Plastik|Kemasan|Ukuran)\s*/i, '').trim();
+      const { data: fallbackPlastik } = await supabase
+        .from('stok_bahan')
+        .select('id_stok, jumlah, nama_bahan')
+        .ilike('nama_bahan', `%${cleanUkuran}%`)
+        .eq('kategori', 'Plastik')
+        .limit(1)
+        .maybeSingle();
+      rawPlastik = fallbackPlastik;
+    }
+
+    if (rawPlastik) {
+      const newJumlahPlastik = Math.max(0, (rawPlastik.jumlah || 0) - packPlastikNeeded);
+      await supabase
+        .from('stok_bahan')
+        .update({ jumlah: newJumlahPlastik, tanggal_update: now })
+        .eq('id_stok', rawPlastik.id_stok);
+
+      results.plastik = {
+        success: true,
+        name: rawPlastik.nama_bahan,
+        amount: packPlastikNeeded,
+        sisa: newJumlahPlastik,
+      };
+      console.log(`[AUTO-STOK] Potong Plastik: -${packPlastikNeeded} Pack (${rawPlastik.nama_bahan}). Sisa: ${newJumlahPlastik} Pack.`);
     }
   } catch (err) {
-    console.error('[STOK SYNC ERROR] Gagal potong stok mentah:', err);
+    console.error('[AUTO-STOK ERROR] Gagal potong stok otomatis saat pesanan dibuat:', err);
+  }
+
+  return results;
+}
+
+/**
+ * PENGEMBALIAN SELURUH STOK SAAT PESANAN DIBATALKAN:
+ * - Kembalikan Kerupuk Mentah (+5 Kg per Bal)
+ * - Kembalikan Bumbu (+1 Kg per Bal)
+ * - Kembalikan Plastik (+1 Pack per Bal)
+ */
+export async function refundAllMaterialsOnCancel(
+  supabase: SupabaseClient,
+  namaProduk: string,
+  qtyBal: number,
+  varianRasa: string = 'Original',
+  ukuranPlastik: string = '1/2 kg'
+) {
+  const qty = Math.max(1, Number(qtyBal) || 1);
+  const now = new Date().toISOString().split('T')[0];
+
+  try {
+    // 1. Kembalikan Kerupuk Mentah
+    const targetKerupuk = productToBahanName(namaProduk);
+    const kgKerupukRefund = qty * KG_PER_BAL;
+
+    let { data: rawKerupuk } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah')
+      .eq('nama_bahan', targetKerupuk)
+      .eq('kategori', 'Kerupuk Mentah')
+      .limit(1)
+      .maybeSingle();
+
+    if (!rawKerupuk) {
+      const { data: fbKerupuk } = await supabase
+        .from('stok_bahan')
+        .select('id_stok, jumlah')
+        .ilike('nama_bahan', `%${namaProduk.replace(/^kerupuk\s*/i, '').trim()}%`)
+        .eq('kategori', 'Kerupuk Mentah')
+        .limit(1)
+        .maybeSingle();
+      rawKerupuk = fbKerupuk;
+    }
+
+    if (rawKerupuk) {
+      await supabase
+        .from('stok_bahan')
+        .update({ jumlah: (rawKerupuk.jumlah || 0) + kgKerupukRefund, tanggal_update: now })
+        .eq('id_stok', rawKerupuk.id_stok);
+      console.log(`[REFUND STOK] Kembalikan Kerupuk Mentah: +${kgKerupukRefund} Kg`);
+    }
+
+    // 2. Kembalikan Bumbu
+    const targetBumbu = varianToBumbuName(varianRasa);
+    const kgBumbuRefund = qty * KG_BUMBU_PER_BAL;
+
+    let { data: rawBumbu } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah')
+      .eq('nama_bahan', targetBumbu)
+      .eq('kategori', 'Bumbu')
+      .limit(1)
+      .maybeSingle();
+
+    if (!rawBumbu) {
+      const { data: fbBumbu } = await supabase
+        .from('stok_bahan')
+        .select('id_stok, jumlah')
+        .ilike('nama_bahan', `%${varianRasa.trim()}%`)
+        .eq('kategori', 'Bumbu')
+        .limit(1)
+        .maybeSingle();
+      rawBumbu = fbBumbu;
+    }
+
+    if (rawBumbu) {
+      await supabase
+        .from('stok_bahan')
+        .update({ jumlah: (rawBumbu.jumlah || 0) + kgBumbuRefund, tanggal_update: now })
+        .eq('id_stok', rawBumbu.id_stok);
+      console.log(`[REFUND STOK] Kembalikan Bumbu: +${kgBumbuRefund} Kg`);
+    }
+
+    // 3. Kembalikan Plastik
+    const targetPlastik = ukuranToPlastikBahanName(ukuranPlastik);
+    const packPlastikRefund = qty * PACK_PLASTIK_PER_BAL;
+
+    let { data: rawPlastik } = await supabase
+      .from('stok_bahan')
+      .select('id_stok, jumlah')
+      .eq('nama_bahan', targetPlastik)
+      .eq('kategori', 'Plastik')
+      .limit(1)
+      .maybeSingle();
+
+    if (!rawPlastik) {
+      const cleanUkuran = ukuranPlastik.replace(/^(Plastik|Kemasan|Ukuran)\s*/i, '').trim();
+      const { data: fbPlastik } = await supabase
+        .from('stok_bahan')
+        .select('id_stok, jumlah')
+        .ilike('nama_bahan', `%${cleanUkuran}%`)
+        .eq('kategori', 'Plastik')
+        .limit(1)
+        .maybeSingle();
+      rawPlastik = fbPlastik;
+    }
+
+    if (rawPlastik) {
+      await supabase
+        .from('stok_bahan')
+        .update({ jumlah: (rawPlastik.jumlah || 0) + packPlastikRefund, tanggal_update: now })
+        .eq('id_stok', rawPlastik.id_stok);
+      console.log(`[REFUND STOK] Kembalikan Plastik: +${packPlastikRefund} Pack`);
+    }
+  } catch (err) {
+    console.error('[REFUND STOK ERROR] Gagal mengembalikan stok saat pesanan dibatalkan:', err);
   }
 }
 
 /**
- * Sinkronisasi pengembalian stok bahan mentah saat pesanan dibatalkan
- */
-export async function refundRawMaterialOnCancel(
-  supabase: SupabaseClient,
-  namaProduk: string,
-  qtyBal: number
-) {
-  try {
-    const bahanName = productToBahanName(namaProduk);
-    const kgRefund = Number(qtyBal) * KG_PER_BAL;
-
-    const { data: rawItem } = await supabase
-      .from('stok_bahan')
-      .select('id_stok, jumlah')
-      .ilike('nama_bahan', bahanName)
-      .maybeSingle();
-
-    if (rawItem) {
-      const newJumlah = (rawItem.jumlah || 0) + kgRefund;
-      await supabase
-        .from('stok_bahan')
-        .update({
-          jumlah: newJumlah,
-          tanggal_update: new Date().toISOString().split('T')[0],
-        })
-        .eq('id_stok', rawItem.id_stok);
-      console.log(`[STOK SYNC] Kembalikan ${kgRefund} Kg ${bahanName}. Sisa: ${newJumlah} Kg.`);
-    }
-  } catch (err) {
-    console.error('[STOK SYNC ERROR] Gagal refund stok mentah:', err);
-  }
-}
-
-/**
- * Sinkronisasi saat supplier mengirim bahan mentah ke Staf Penggoreng -> Update stok produk katalog Owner
+ * Sinkronisasi saat supplier mengirim bahan mentah ke Dapur -> Update stok produk katalog Owner
  */
 export async function syncRawMaterialToProductCatalog(
   supabase: SupabaseClient,
@@ -121,7 +343,6 @@ export async function syncRawMaterialToProductCatalog(
 
     if (balAddition <= 0) return;
 
-    // Cari produk di katalog
     const { data: prodItems } = await supabase
       .from('produk')
       .select('id_produk, stok')
@@ -134,7 +355,7 @@ export async function syncRawMaterialToProductCatalog(
           .from('produk')
           .update({ stok: newStokBal })
           .eq('id_produk', prodItem.id_produk);
-        console.log(`[STOK SYNC] Tambah ${balAddition} Bal ke katalog ${prodName} (#${prodItem.id_produk}). Sisa: ${newStokBal} Bal.`);
+        console.log(`[STOK SYNC] Tambah ${balAddition} Bal ke katalog ${prodName}. Sisa: ${newStokBal} Bal.`);
       }
     }
   } catch (err) {
@@ -143,7 +364,7 @@ export async function syncRawMaterialToProductCatalog(
 }
 
 /**
- * Sinkronisasi saat Staf Penggoreng mengurangi / memakai bahan mentah -> Kurangi stok produk katalog Owner
+ * Sinkronisasi saat bahan mentah berkurang -> Update stok produk katalog Owner
  */
 export async function reduceProductCatalogFromRawMaterial(
   supabase: SupabaseClient,
@@ -168,68 +389,10 @@ export async function reduceProductCatalogFromRawMaterial(
           .from('produk')
           .update({ stok: newStokBal })
           .eq('id_produk', prodItem.id_produk);
-        console.log(`[STOK SYNC] Kurangi ${balReduction} Bal di katalog ${prodName} (#${prodItem.id_produk}). Sisa: ${newStokBal} Bal.`);
+        console.log(`[STOK SYNC] Kurangi ${balReduction} Bal di katalog ${prodName}. Sisa: ${newStokBal} Bal.`);
       }
     }
   } catch (err) {
     console.error('[STOK SYNC ERROR] Gagal kurangi produk katalog:', err);
   }
 }
-
-/**
- * Konversi ukuran plastik ke nama bahan di stok_bahan
- * Contoh: "1/2 kg" -> "Plastik Ukuran 1/2 kg"
- *         "30x45 kg" -> "Plastik Ukuran 30x45 kg"
- */
-export function ukuranToPlastikBahanName(ukuran: string): string {
-  const clean = String(ukuran || '').trim();
-  if (!clean) return '';
-  if (clean.toLowerCase().startsWith('plastik ukuran ')) return clean;
-  return `Plastik Ukuran ${clean}`;
-}
-
-/**
- * Konversi nama bahan plastik ke label ukuran
- * Contoh: "Plastik Ukuran 1/2 kg" -> "1/2 kg"
- */
-export function plastikBahanNameToUkuran(namaBahan: string): string {
-  const clean = String(namaBahan || '').trim();
-  if (clean.toLowerCase().startsWith('plastik ukuran ')) {
-    return clean.slice(15).trim();
-  }
-  return clean;
-}
-
-/**
- * Potong stok plastik kemasan di gudang pembungkusan saat pesanan selesai dibungkus
- */
-export async function deductPlasticOnPackingFinish(
-  supabase: SupabaseClient,
-  ukuranPlastik: string,
-  packAmount: number = 1
-) {
-  try {
-    const bahanName = ukuranToPlastikBahanName(ukuranPlastik);
-    const { data: plasticItem } = await supabase
-      .from('stok_bahan')
-      .select('id_stok, jumlah, satuan')
-      .ilike('nama_bahan', bahanName)
-      .maybeSingle();
-
-    if (plasticItem) {
-      const newJumlah = Math.max(0, (plasticItem.jumlah || 0) - packAmount);
-      await supabase
-        .from('stok_bahan')
-        .update({
-          jumlah: newJumlah,
-          tanggal_update: new Date().toISOString().split('T')[0],
-        })
-        .eq('id_stok', plasticItem.id_stok);
-      console.log(`[PLASTIK SYNC] Potong ${packAmount} ${plasticItem.satuan} ${bahanName}. Sisa stok: ${newJumlah} ${plasticItem.satuan}.`);
-    }
-  } catch (err) {
-    console.error('[PLASTIK SYNC ERROR] Gagal potong stok plastik:', err);
-  }
-}
-
-

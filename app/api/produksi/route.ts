@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
-import { deductPlasticOnPackingFinish } from '@/lib/stock-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,17 +63,10 @@ export async function PATCH(req: NextRequest) {
           .update({ status_pesanan: 'diproses' })
           .eq('id_pesanan', Number(id_pesanan));
       } else if (next_status === 'selesai') {
-        const { data: orderData } = await supabase
+        await supabase
           .from('pesanan')
           .update({ status_pesanan: 'selesai' })
-          .eq('id_pesanan', Number(id_pesanan))
-          .select('ukuran_plastik, jumlah')
-          .maybeSingle();
-
-        // Potong stok plastik di gudang pembungkusan
-        if (orderData?.ukuran_plastik) {
-          await deductPlasticOnPackingFinish(supabase, orderData.ukuran_plastik, 1);
-        }
+          .eq('id_pesanan', Number(id_pesanan));
       }
     }
 

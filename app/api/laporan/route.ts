@@ -83,8 +83,16 @@ export async function GET(req: NextRequest) {
 
     const produkBreakdown = Object.values(produkMap).sort((a, b) => b.total - a.total);
 
-    // Ambil rekap stok bahan baku
-    const { data: stockList } = await supabase.from('stok_bahan').select('*');
+    // Ambil rekap stok bahan baku (Hanya Kerupuk Mentah, Bumbu, & Plastik, Bebas Minyak)
+    const { data: rawStockList } = await supabase
+      .from('stok_bahan')
+      .select('*')
+      .order('kategori', { ascending: true })
+      .order('nama_bahan', { ascending: true });
+
+    const stockList = (rawStockList || []).filter(
+      (s) => !s.nama_bahan.toLowerCase().includes('minyak')
+    );
 
     // Ambil seluruh data master pelanggan terdaftar
     const { data: pelangganList } = await supabase
@@ -117,7 +125,7 @@ export async function GET(req: NextRequest) {
         produkList: produkList || [],
         rekapMetode,
         produkBreakdown,
-        stockList: stockList || [],
+        stockList,
         chartData,
       },
     }, {

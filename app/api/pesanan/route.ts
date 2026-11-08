@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
-import { deductRawMaterialOnOrder } from '@/lib/stock-sync';
+import { deductAllMaterialsOnOrder } from '@/lib/stock-sync';
 import { getHargaBumbu, getHargaPlastik } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
@@ -174,19 +174,27 @@ export async function POST(req: NextRequest) {
       console.error('Error insert antrean produksi:', prodQueueErr);
     }
 
-    // 4. Kurangi stok produk dan sinkronkan stok bahan mentah di dapur penggorengan dadakan
+    // 4. OTOMATIS KURANGI STOK PRODUK KATALOG DAN BAHAN (KERUPUK MENTAH, BUMBU, & PLASTIK)
+    // - Stok produk katalog berkurang `qty` Bal
     await supabase
       .from('produk')
       .update({ stok: Math.max(0, prodData.stok - qty) })
       .eq('id_produk', Number(id_produk));
 
-    // Otomatis potong stok kerupuk mentah (5 Kg per 1 Bal goreng dadakan)
-    await deductRawMaterialOnOrder(supabase, prodData.nama_produk, qty);
+    // - Stok kerupuk mentah (5 Kg/bal), bumbu (1 Kg/bal), dan plastik (1 pack/bal) otomatis berkurang langsung
+    const deductInfo = await deductAllMaterialsOnOrder(
+      supabase,
+      prodData.nama_produk,
+      qty,
+      varian_rasa,
+      ukuran_plastik
+    );
 
     return NextResponse.json({
       success: true,
-      message: 'Pesanan berhasil dibuat dan otomatis diteruskan ke bagian produksi!',
+      message: `Pesanan ${qty} Bal ${prodData.nama_produk} berhasil dibuat! Stok produk, bumbu (${varian_rasa}), dan kemasan plastik (${ukuran_plastik}) telah otomatis terpotong.`,
       data: orderData,
+      deductInfo,
     });
   } catch (err: any) {
     return NextResponse.json({ message: 'Terjadi kesalahan sistem: ' + err.message }, { status: 500 });
