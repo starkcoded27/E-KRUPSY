@@ -512,7 +512,7 @@ export default function OwnerDashboardPage() {
 
   return (
     <RoleGuard allowedRoles={['owner']} pageTitle="Dashboard Owner">
-      <div className="space-y-6">
+      <div className={`space-y-6 ${selectedOrderToPrint ? 'print:hidden' : ''}`}>
         {/* Banner Eksekutif Owner */}
         <div className="bg-gradient-to-r from-amber-800 via-brand-maroon to-brand-darkmaroon text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-3xl">
@@ -2274,97 +2274,6 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
         )}
-        {/* MODAL CETAK RESI RESMI OLEH OWNER UNTUK DIKASIH KE PELANGGAN (UC-13) */}
-        {selectedOrderToPrint && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative print:p-0 print:border-none print:shadow-none">
-              <button
-                onClick={() => setSelectedOrderToPrint(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition print:hidden"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Header Resi Pabrik */}
-              <div className="text-center pb-4 border-b border-dashed border-gray-300">
-                <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-xl mx-auto flex items-center justify-center mb-2 shadow">
-                  KD
-                </div>
-                <h3 className="font-black text-gray-900 text-lg uppercase tracking-wide">Pabrik Kerupuk Diansyah</h3>
-                <p className="text-[11px] text-gray-500">Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang</p>
-                <div className="mt-2 inline-block px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  RESI RESMI PEMBAYARAN SAH
-                </div>
-              </div>
-
-              {/* Rincian Transaksi */}
-              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Nomor Transaksi:</span>
-                  <span className="font-mono font-bold text-gray-800">TRX-KD-{selectedOrderToPrint.id_pesanan}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Tanggal:</span>
-                  <span className="font-medium text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Nama Pelanggan:</span>
-                  <span className="font-bold text-gray-800">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">No. Telepon:</span>
-                  <span className="font-medium text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</span>
-                </div>
-              </div>
-
-              {/* Rincian Produk */}
-              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
-                <div className="flex justify-between font-bold text-gray-900">
-                  <span>{selectedOrderToPrint.produk?.nama_produk} ({selectedOrderToPrint.varian_rasa})</span>
-                  <span>{selectedOrderToPrint.jumlah} {selectedOrderToPrint.produk?.satuan}</span>
-                </div>
-                <div className="flex justify-between text-gray-500 text-[11px]">
-                  <span>Ukuran Kemasan: {selectedOrderToPrint.ukuran_plastik}</span>
-                  <span>Metode: <strong className="uppercase">{selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}</strong></span>
-                </div>
-                <div className="flex justify-between pt-2 text-sm font-black text-brand-maroon">
-                  <span>TOTAL PEMBAYARAN:</span>
-                  <span>Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-
-              {/* Status Lunas & Tanda Terima */}
-              <div className="py-3 text-center">
-                <p className="text-[11px] text-gray-600 font-bold">
-                  Status: <span className="text-emerald-600">✓ LUNAS (Kas Telah Diterima Owner)</span>
-                </p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Resi cetak ini resmi diserahkan kepada pelanggan sebagai bukti transaksi sah Pabrik Kerupuk Diansyah.
-                </p>
-              </div>
-
-              {/* Tombol Cetak Khusus Owner */}
-              <div className="mt-4 flex gap-2 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="flex-1 py-2.5 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition active:scale-95"
-                >
-                  <Printer className="w-4 h-4" />
-                  Cetak Resi Fisik (Print)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedOrderToPrint(null)}
-                  className="py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* MODAL VERIFIKASI BUKTI TRANSFER BANK PELANGGAN OLEH OWNER */}
         {selectedTransferProof && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
@@ -3052,6 +2961,242 @@ export default function OwnerDashboardPage() {
           </div>
         )}
       </div>
+          {/* MODAL CETAK RESI RESMI OLEH OWNER UNTUK DIKASIH KE PELANGGAN (UC-13) */}
+      {selectedOrderToPrint && (
+        <>
+          {/* TAMPILAN 1: MODAL POPUP DI LAYAR DASHBOARD (PERSIS GAMBAR 2) */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:hidden">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
+              <button
+                type="button"
+                onClick={() => setSelectedOrderToPrint(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Header Resi Pabrik */}
+              <div className="text-center pb-4 border-b border-dashed border-gray-300">
+                <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-xl mx-auto flex items-center justify-center mb-2 shadow">
+                  KD
+                </div>
+                <h3 className="font-black text-gray-900 text-lg uppercase tracking-wide">Pabrik Kerupuk Diansyah</h3>
+                <p className="text-[11px] text-gray-500">Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang</p>
+                <div className="mt-2 inline-block px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  RESI RESMI PEMBAYARAN SAH
+                </div>
+              </div>
+
+              {/* Rincian Transaksi */}
+              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Nomor Transaksi:</span>
+                  <span className="font-mono font-bold text-gray-800">TRX-KD-{selectedOrderToPrint.id_pesanan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Tanggal:</span>
+                  <span className="font-medium text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Nama Pelanggan:</span>
+                  <span className="font-bold text-gray-800">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">No. Telepon:</span>
+                  <span className="font-medium text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</span>
+                </div>
+              </div>
+
+              {/* Rincian Produk */}
+              <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>{selectedOrderToPrint.produk?.nama_produk} ({selectedOrderToPrint.varian_rasa})</span>
+                  <span>{selectedOrderToPrint.jumlah} {selectedOrderToPrint.produk?.satuan}</span>
+                </div>
+                <div className="flex justify-between text-gray-500 text-[11px]">
+                  <span>Ukuran Kemasan: {selectedOrderToPrint.ukuran_plastik}</span>
+                  <span>Metode: <strong className="uppercase">{selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}</strong></span>
+                </div>
+                <div className="flex justify-between pt-2 text-sm font-black text-brand-maroon">
+                  <span>TOTAL PEMBAYARAN:</span>
+                  <span>Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+
+              {/* Status Lunas & Tanda Terima */}
+              <div className="py-3 text-center">
+                <p className="text-[11px] text-gray-600 font-bold">
+                  Status: <span className="text-emerald-600">✓ LUNAS (Kas Telah Diterima Owner)</span>
+                </p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Resi cetak ini resmi diserahkan kepada pelanggan sebagai bukti transaksi sah Pabrik Kerupuk Diansyah.
+                </p>
+              </div>
+
+              {/* Tombol Cetak Khusus Owner */}
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex-1 py-2.5 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition active:scale-95"
+                >
+                  <Printer className="w-4 h-4" />
+                  Cetak Resi Fisik (Print)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderToPrint(null)}
+                  className="py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* TAMPILAN 2: DOKUMEN CETAK RESMI DI KERTAS (PERSIS GAMBAR 3 TAPI FULL-PAGE & CENTER PROPORSIONAL) */}
+          <div className="hidden print:block print:w-full print:m-0 print:p-0">
+            <div className="print-receipt-fullpage">
+              {/* Bagian Atas: KOP RESMI PABRIK KERUPUK DIANSYAH */}
+              <div>
+                <div className="text-center pb-4 border-b-2 border-gray-900">
+                  <div className="flex items-center justify-center gap-3 mb-1">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-2xl flex items-center justify-center shadow">
+                      KD
+                    </div>
+                    <div className="text-left">
+                      <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">Pabrik Kerupuk Diansyah</h2>
+                      <p className="text-xs text-gray-600 font-medium">Spesialis Kerupuk Gurih & Renyah Berkualitas Tinggi &bull; Sumedang</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang &bull; Telp / WA: 0895-2578-3995
+                  </p>
+                  <div className="mt-2.5 inline-block px-4 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-400 uppercase tracking-wider">
+                    ✓ RESI RESMI PEMBAYARAN SAH
+                  </div>
+                </div>
+
+                {/* Grid 2 Kolom Info Transaksi & Info Pelanggan */}
+                <div className="grid grid-cols-2 gap-4 py-4 border-b border-dashed border-gray-300 text-xs">
+                  <div className="space-y-1.5">
+                    <div className="flex">
+                      <span className="text-gray-500 w-36">Nomor Transaksi:</span>
+                      <span className="font-mono font-bold text-gray-900">TRX-KD-{selectedOrderToPrint.id_pesanan}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-36">Tanggal Pemesanan:</span>
+                      <span className="font-semibold text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-36">Metode Pembayaran:</span>
+                      <span className="font-bold uppercase text-brand-maroon">
+                        {selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 pl-4">
+                    <div className="flex">
+                      <span className="text-gray-500 w-32">Nama Pelanggan:</span>
+                      <span className="font-bold text-gray-900">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-32">No. Telepon:</span>
+                      <span className="font-semibold text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="text-gray-500 w-32">Status Pesanan:</span>
+                      <span className="font-bold text-emerald-700">LUNAS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bagian Tengah: Tabel Rincian Produk & Total Pembayaran & Status */}
+              <div className="my-auto py-3">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300 bg-gray-50 text-gray-700 font-bold">
+                      <th className="py-2.5 px-3 text-center w-12">No</th>
+                      <th className="py-2.5 px-3">Produk & Varian Rasa</th>
+                      <th className="py-2.5 px-3 text-center">Ukuran Kemasan</th>
+                      <th className="py-2.5 px-3 text-center">Jumlah (Qty)</th>
+                      <th className="py-2.5 px-3 text-right">Total Harga</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    <tr>
+                      <td className="py-3 px-3 text-center font-bold text-gray-600">1</td>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-gray-900 text-sm block">
+                          {selectedOrderToPrint.produk?.nama_produk}
+                        </span>
+                        <span className="text-[11px] text-gray-500 font-medium">
+                          Varian: {selectedOrderToPrint.varian_rasa}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center font-medium text-gray-700">
+                        {selectedOrderToPrint.ukuran_plastik}
+                      </td>
+                      <td className="py-3 px-3 text-center font-bold text-gray-900">
+                        {selectedOrderToPrint.jumlah} {selectedOrderToPrint.produk?.satuan}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-gray-900 text-sm">
+                        Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-800 bg-gray-50 font-black text-sm">
+                      <td colSpan={4} className="py-3 px-4 text-right uppercase tracking-wider text-gray-900">
+                        TOTAL PEMBAYARAN:
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-base text-brand-maroon">
+                        Rp {Number(selectedOrderToPrint.total_harga).toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* Status Lunas Box */}
+                <div className="py-3 px-4 bg-emerald-50/60 border border-emerald-200 rounded-xl my-4 text-center">
+                  <p className="text-xs text-emerald-900 font-bold">
+                    Status Pembayaran: <span className="text-emerald-700 font-black">✓ LUNAS (Kas Telah Diterima & Diverifikasi Owner)</span>
+                  </p>
+                  <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                    Resi cetak ini resmi diserahkan kepada pelanggan sebagai bukti transaksi sah Pabrik Kerupuk Diansyah.
+                  </p>
+                </div>
+              </div>
+
+              {/* Bagian Bawah: Tanda Tangan Resmi Pengesahan Resi */}
+              <div>
+                <div className="pt-2 flex justify-between items-end text-xs text-gray-700">
+                  <div className="text-center w-52">
+                    <p className="font-semibold text-gray-600 mb-14">Tanda Terima Pelanggan,</p>
+                    <p className="font-bold text-gray-900 border-t border-gray-400 pt-1">
+                      ( {selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'} )
+                    </p>
+                  </div>
+                  <div className="text-center w-56">
+                    <p className="text-gray-500 text-[10px] mb-1">
+                      Sumedang, {selectedOrderToPrint.tanggal_pesanan || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    <p className="font-semibold text-gray-600 mb-14">Owner / Kasir Pabrik,</p>
+                    <p className="font-bold text-gray-900 border-t border-gray-800 pt-1">
+                      ( Bapak Diansyah )
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[10px] text-gray-400">
+                  Dokumen resi transaksi fisik resmi diterbitkan oleh Sistem Informasi E-KRUPSY &bull; Pabrik Kerupuk Diansyah
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </RoleGuard>
   );
 }
