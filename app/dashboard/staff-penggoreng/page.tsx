@@ -11,16 +11,9 @@ import {
   Clock, 
   Layers, 
   RefreshCw,
-<<<<<<< HEAD
-  Sparkles,
-  ShieldCheck,
-  Scale,
-  Check
-=======
   AlertTriangle,
   ShieldCheck,
   Eye
->>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
 } from 'lucide-react';
 
 interface ProduksiItem {
@@ -51,11 +44,21 @@ interface ProduksiItem {
   }[];
 }
 
+interface StokItem {
+  id_stok: number;
+  nama_bahan: string;
+  kategori: string;
+  satuan: string;
+  jumlah: number;
+  tanggal_update: string;
+}
+
 export default function StaffPenggorengDashboardPage() {
   const { user } = useAuth();
 
   // State data
   const [productionList, setProductionList] = useState<ProduksiItem[]>([]);
+  const [stockList, setStockList] = useState<StokItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // 3 Kondisi Sistem (State)
@@ -67,9 +70,16 @@ export default function StaffPenggorengDashboardPage() {
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
-      const resProd = await fetch('/api/produksi');
+      const [resProd, resStock] = await Promise.all([
+        fetch('/api/produksi'),
+        fetch('/api/stok'),
+      ]);
+
       const dataProd = await resProd.json();
+      const dataStock = await resStock.json();
+
       if (resProd.ok) setProductionList(dataProd.data || []);
+      if (resStock.ok) setStockList(dataStock.data || []);
     } catch (err: any) {
       if (!silent) console.error('Error fetch staff penggoreng:', err);
     } finally {
@@ -80,7 +90,7 @@ export default function StaffPenggorengDashboardPage() {
   useEffect(() => {
     fetchData();
 
-    // Auto-update antrean live real-time tanpa reload / refresh manual
+    // Auto-update antrean dan stok live real-time tanpa reload / refresh manual
     const interval = setInterval(() => {
       fetchData(true);
     }, 2500);
@@ -123,35 +133,11 @@ export default function StaffPenggorengDashboardPage() {
 
   // Filter antrean penggorengan yang belum selesai
   const fryingTasks = productionList.filter((p) => p.status_produksi !== 'selesai');
-  const completedTodayTasks = productionList.filter((p) => p.status_produksi === 'selesai');
 
   return (
     <RoleGuard allowedRoles={['staff_penggoreng']} pageTitle="Dashboard Staf Penggorengan">
       <div className="space-y-6">
         {/* Banner Staf Penggoreng */}
-<<<<<<< HEAD
-        <div className="bg-gradient-to-r from-orange-700 via-brand-maroon to-amber-900 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight">
-                Antrean Penggorengan Wajan
-              </h1>
-              <p className="mt-1 text-xs sm:text-sm text-orange-100/90">
-                Halo, <strong>{user?.nama}</strong>. Proses pesanan masuk dan teruskan ke QC/Pembungkusan.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => fetchData()}
-                disabled={isLoading}
-                className="inline-flex items-center gap-1.5 text-xs text-white font-bold bg-white/15 hover:bg-white/25 px-3.5 py-2 rounded-xl border border-white/20 transition active:scale-95"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                Segarkan Antrean
-              </button>
-            </div>
-=======
         <div className="bg-gradient-to-r from-orange-700 via-brand-maroon to-amber-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-400/20 text-orange-200 border border-orange-300/30 mb-3">
@@ -175,7 +161,6 @@ export default function StaffPenggorengDashboardPage() {
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               Muat Ulang Antrean & Stok
             </button>
->>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
           </div>
         </div>
 
@@ -228,61 +213,83 @@ export default function StaffPenggorengDashboardPage() {
                         </span>
                         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                           isWaiting
-                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            ? 'bg-gray-200 text-gray-700'
                             : isFrying
                             ? 'bg-orange-100 text-orange-800 border border-orange-300 animate-pulse'
-                            : item.status_produksi === 'siap_diverifikasi'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : hasVerification && isLolos
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : hasVerification && !isLolos
+                            ? 'bg-red-100 text-red-800 border border-red-300'
+                            : 'bg-indigo-100 text-indigo-800 border border-indigo-300'
                         }`}>
-                          {isWaiting
-                            ? '⏱️ Menunggu Masuk Wajan'
-                            : isFrying
-                            ? '🔥 Sedang Digoreng di Wajan'
-                            : item.status_produksi === 'siap_diverifikasi'
-                            ? '🔍 Siap Diverifikasi QC'
-                            : '📦 Sedang Dikemas'}
+                          {isWaiting 
+                            ? 'Menunggu Wajan' 
+                            : isFrying 
+                            ? 'Sedang Digoreng' 
+                            : hasVerification && isLolos
+                            ? '✓ Lolos Verifikasi Pembungkus'
+                            : hasVerification && !isLolos
+                            ? '⚠ Cacat / Perlu Digoreng Ulang'
+                            : 'Selesai Goreng (Siap QC)'}
                         </span>
                       </div>
 
-<<<<<<< HEAD
-                      <div className="font-bold text-gray-900 text-sm">
-                        {item.produk?.nama_produk} &bull;{' '}
-                        <span className="text-orange-700">{item.pesanan?.jumlah} {item.produk?.satuan || 'Bal'}</span>
-=======
                       <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.produk?.nama_produk}</h3>
                       <div className="text-gray-600 mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-xs sm:text-sm">
                         <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
                         <span>Varian Rasa: <strong className="text-orange-700">{item.pesanan?.varian_rasa}</strong></span>
                         <span>Pelanggan: <strong className="text-gray-800">{item.pesanan?.pelanggan?.nama_lengkap || '-'}</strong></span>
->>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
                       </div>
 
-                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-600">
-                        <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                          Varian: <strong>{item.pesanan?.varian_rasa || 'Original'}</strong>
-                        </span>
-                        <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                          Kemasan: <strong>{item.pesanan?.ukuran_plastik || '1/2 kg'}</strong>
-                        </span>
-                        <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                          Pelanggan: <strong>{item.pesanan?.pelanggan?.nama_lengkap || 'Pelanggan'}</strong>
-                        </span>
-                        <span className="bg-orange-50 text-orange-800 px-2 py-0.5 rounded-md border border-orange-200 font-semibold">
-                          Bahan Terpakai: ~{(item.pesanan?.jumlah || 1) * 5} Kg Mentah + {(item.pesanan?.jumlah || 1) * 1} Kg Bumbu (Auto-Deducted)
-                        </span>
-                      </div>
+                      {/* FEEDBACK VERIFIKASI DARI STAF PEMBUNGKUS */}
+                      {hasVerification && latestVerif && (
+                        <div className={`mt-3 p-3 rounded-xl border text-xs ${
+                          isLolos 
+                            ? 'bg-emerald-50/90 border-emerald-200 text-emerald-900' 
+                            : 'bg-red-50/90 border-red-200 text-red-900'
+                        }`}>
+                          <div className="flex items-center justify-between font-bold">
+                            <span className="flex items-center gap-1.5">
+                              {isLolos ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              ) : (
+                                <AlertTriangle className="w-4 h-4 text-red-600" />
+                              )}
+                              Hasil Verifikasi Staf Pembungkus: {latestVerif.status}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 italic bg-white/80 p-2 rounded-lg border border-gray-100">
+                            &ldquo;{latestVerif.keterangan}&rdquo;
+                          </p>
+                          {isLolos ? (
+                            <span className="text-[11px] text-emerald-700 mt-1.5 block font-medium">
+                              Kerupuk telah diserahterimakan dan sedang dalam proses pengemasan plastik.
+                            </span>
+                          ) : (
+                            <div className="mt-2 flex items-center justify-between pt-1">
+                              <span className="text-[11px] text-red-700 font-medium">
+                                Kualitas belum sesuai. Silakan lakukan penggorengan ulang.
+                              </span>
+                              <button
+                                onClick={() => handleUpdateStatus(item, 'diproses', 'Sedang Digoreng Ulang')}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow transition"
+                              >
+                                <RefreshCw className="w-3 h-3" /> Goreng Ulang
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Tombol Tindakan Penggoreng */}
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       {isWaiting && (
                         <button
-                          onClick={() => handleUpdateStatus(item, 'diproses', 'Mulai Menggoreng')}
+                          onClick={() => handleUpdateStatus(item, 'diproses', 'Sedang Digoreng')}
                           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
                         >
                           <Flame className="w-4 h-4" />
-                          Mulai Goreng di Wajan
+                          Mulai Goreng
                         </button>
                       )}
 
@@ -299,14 +306,14 @@ export default function StaffPenggorengDashboardPage() {
                       {isReadyQC && (
                         <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-2 rounded-xl border border-blue-200 flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-blue-600" />
-                          Menunggu QC Staf Pembungkus &rarr;
+                          Menunggu Verifikasi Staf Pembungkus &rarr;
                         </span>
                       )}
 
                       {hasVerification && isLolos && (
                         <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-300 flex items-center gap-1.5 shadow-sm">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          Lolos QC &bull; Sedang Dibungkus
+                          Terverifikasi QC &bull; Sedang Dikemas
                         </span>
                       )}
                     </div>
@@ -317,36 +324,6 @@ export default function StaffPenggorengDashboardPage() {
           )}
         </div>
 
-<<<<<<< HEAD
-        {/* RIWAYAT PENGGORENGAN SELESAI */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            Riwayat Pesanan yang Selesai Digoreng Hari Ini ({completedTodayTasks.length})
-          </h2>
-          <p className="text-xs text-gray-500 mb-4">
-            Pesanan yang telah tuntas digoreng dan telah selesai dikemas oleh bagian pembungkusan
-          </p>
-
-          {completedTodayTasks.length === 0 ? (
-            <p className="text-xs text-gray-400 italic">Belum ada pesanan yang selesai dikemas hari ini.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {completedTodayTasks.map((t) => (
-                <div key={t.id_produksi} className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs">
-                  <div className="flex justify-between font-bold text-gray-900 mb-1">
-                    <span>Pesanan #{t.id_pesanan}</span>
-                    <span className="text-emerald-700 flex items-center gap-1 font-bold">
-                      <Check className="w-3.5 h-3.5" /> Selesai
-                    </span>
-                  </div>
-                  <div className="text-gray-700">{t.produk?.nama_produk} ({t.pesanan?.jumlah} Bal)</div>
-                  <div className="text-gray-400 text-[11px] mt-1">Rasa: {t.pesanan?.varian_rasa || 'Original'}</div>
-                </div>
-              ))}
-            </div>
-          )}
-=======
         {/* KETERSEDIAAN STOK BAHAN BAKU & BUMBU DI DAPUR (VIEW OUTPUT UNTUK PENGGORENG) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
@@ -420,7 +397,6 @@ export default function StaffPenggorengDashboardPage() {
                 );
               })}
           </div>
->>>>>>> e7db4d333f2685ffba61a679a0f54226602f2786
         </div>
       </div>
     </RoleGuard>
