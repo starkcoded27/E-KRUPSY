@@ -2858,10 +2858,15 @@ export default function PelangganDashboardPage() {
 
                     <div className="flex justify-between">
 
+                      <span className="text-gray-400">Metode Bayar:</span>
+                      <span className="font-bold text-gray-900">QRIS Instan <span className="text-emerald-700 font-semibold text-[11px]">(Lunas)</span></span>
+                    </div>
+                    <div className="flex justify-between items-start">
                       <span className="text-gray-400">Tujuan Dana:</span>
-
-                      <span className="text-emerald-700 font-bold text-[11px] text-right max-w-[180px]">{qrisReceiptData.destination}</span>
-
+                      <div className="text-right">
+                        <span className="font-bold text-gray-900 block">Pabrik Kerupuk Diansyah</span>
+                        <span className="text-[10px] text-gray-500 block">a/n Bapak Diansyah</span>
+                      </div>
                     </div>
 
                   </div>
@@ -3340,41 +3345,65 @@ export default function PelangganDashboardPage() {
               </div>
 
               {/* Grid 2 Kolom Info Transaksi QRIS & Info Pelanggan */}
-              <div className="grid grid-cols-2 gap-4 py-4 border-b border-dashed border-gray-300 text-xs">
-                <div className="space-y-1.5">
-                  <div className="flex">
-                    <span className="text-gray-500 w-36">Ref ID QRIS:</span>
-                    <span className="font-mono font-bold text-gray-900">{qrisReceiptData.ref_id}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="text-gray-500 w-36">Nomor Transaksi:</span>
-                    <span className="font-mono font-bold text-gray-900">TRX-KD-{qrisReceiptData.orderId}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="text-gray-500 w-36">Waktu Bayar:</span>
-                    <span className="font-semibold text-gray-800">{qrisReceiptData.paidAt}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="text-gray-500 w-36">Metode Pembayaran:</span>
-                    <span className="font-bold uppercase text-brand-maroon">
-                      QRIS Instan (Standar Pembayaran Nasional)
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-1.5 pl-4">
-                  <div className="flex">
-                    <span className="text-gray-500 w-32">Nama Pembeli:</span>
-                    <span className="font-bold text-gray-900">{qrisReceiptData.customerName}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="text-gray-500 w-32">Tujuan Dana:</span>
-                    <span className="font-semibold text-emerald-800">{qrisReceiptData.destination}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="text-gray-500 w-32">Status Transaksi:</span>
-                    <span className="font-bold text-emerald-700">✓ LUNAS OTOMATIS</span>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-8 py-3.5 border-b border-dashed border-gray-300 text-xs">
+                {/* Kolom Kiri */}
+                <table className="w-full text-xs border-collapse">
+                  <tbody>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap w-36">Ref ID QRIS</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center w-3">:</td>
+                      <td className="py-1 font-mono font-bold text-gray-900">{qrisReceiptData.ref_id}</td>
+                    </tr>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Nomor Transaksi</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                      <td className="py-1 font-mono font-bold text-gray-900">TRX-KD-{qrisReceiptData.orderId}</td>
+                    </tr>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Waktu Bayar</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                      <td className="py-1 font-medium text-gray-800">{qrisReceiptData.paidAt}</td>
+                    </tr>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Metode Pembayaran</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                      <td className="py-1">
+                        <span className="font-bold text-gray-900">QRIS Instan</span>
+                        <span className="text-[11px] text-emerald-700 font-semibold ml-1.5">(Otomatis Lunas)</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Kolom Kanan */}
+                <table className="w-full text-xs border-collapse">
+                  <tbody>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap w-32">Nama Pembeli</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center w-3">:</td>
+                      <td className="py-1 font-bold text-gray-900">{qrisReceiptData.customerName}</td>
+                    </tr>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Tujuan Dana</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                      <td className="py-1 font-bold text-gray-900">Pabrik Kerupuk Diansyah</td>
+                    </tr>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Penerima Dana</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                      <td className="py-1 font-medium text-gray-800">a/n Bapak Diansyah</td>
+                    </tr>
+                    <tr className="align-middle">
+                      <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Status Transaksi</td>
+                      <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                      <td className="py-1">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          ✓ LUNAS OTOMATIS
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 

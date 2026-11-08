@@ -3078,37 +3078,54 @@ export default function OwnerDashboardPage() {
                 </div>
 
                 {/* Grid 2 Kolom Info Transaksi & Info Pelanggan */}
-                <div className="grid grid-cols-2 gap-4 py-4 border-b border-dashed border-gray-300 text-xs">
-                  <div className="space-y-1.5">
-                    <div className="flex">
-                      <span className="text-gray-500 w-36">Nomor Transaksi:</span>
-                      <span className="font-mono font-bold text-gray-900">TRX-KD-{selectedOrderToPrint.id_pesanan}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="text-gray-500 w-36">Tanggal Pemesanan:</span>
-                      <span className="font-semibold text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="text-gray-500 w-36">Metode Pembayaran:</span>
-                      <span className="font-bold uppercase text-brand-maroon">
-                        {selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5 pl-4">
-                    <div className="flex">
-                      <span className="text-gray-500 w-32">Nama Pelanggan:</span>
-                      <span className="font-bold text-gray-900">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="text-gray-500 w-32">No. Telepon:</span>
-                      <span className="font-semibold text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="text-gray-500 w-32">Status Pesanan:</span>
-                      <span className="font-bold text-emerald-700">LUNAS</span>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-2 gap-6 py-4 border-b border-dashed border-gray-300 text-xs">
+                  {/* Kolom Kiri */}
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap w-28">No. Transaksi</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center w-3">:</td>
+                        <td className="py-1 font-mono font-bold text-gray-900">TRX-KD-{selectedOrderToPrint.id_pesanan}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Tanggal Pesanan</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1 font-semibold text-gray-800">{selectedOrderToPrint.tanggal_pesanan}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Metode Bayar</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1 font-bold text-gray-900 uppercase">
+                          {selectedOrderToPrint.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Kolom Kanan */}
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap w-28">Nama Pelanggan</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center w-3">:</td>
+                        <td className="py-1 font-bold text-gray-900">{selectedOrderToPrint.pelanggan?.nama_lengkap || 'Pelanggan'}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">No. Telepon</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1 font-semibold text-gray-800">{selectedOrderToPrint.pelanggan?.no_telp || '-'}</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Status Pesanan</td>
+                        <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
+                        <td className="py-1">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            ✓ SUDAH LUNAS
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
