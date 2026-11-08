@@ -22,7 +22,6 @@ body {
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -50,7 +49,16 @@ body {
   }
 
   @page {
-    size: auto;
-    margin: 10mm;
+    size: A4 portrait;
+    margin: 10mm 14mm;
+  }
+
+  .print-receipt-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
