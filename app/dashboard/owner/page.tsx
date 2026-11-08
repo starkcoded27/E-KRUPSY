@@ -1980,8 +1980,8 @@ export default function OwnerDashboardPage() {
 
         {/* MODAL CETAK RESI RESMI OLEH OWNER UNTUK DIKASIH KE PELANGGAN (UC-13) */}
         {selectedOrderToPrint && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:static print:inset-auto print:p-0 print:bg-transparent print:block print:z-auto print:m-0">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative print:p-6 print:border print:border-gray-400 print:shadow-none print:max-w-md print:mx-auto print:rounded-2xl print:break-inside-avoid print:page-break-inside-avoid">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:static print:inset-auto print:p-0 print:bg-transparent print:z-auto print:m-0 print-center-card-wrapper">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative print:p-6 print:border print:border-gray-400 print:shadow-none print:max-w-md print:w-full print:rounded-2xl print:break-inside-avoid print:page-break-inside-avoid print-center-card">
               <button
                 onClick={() => setSelectedOrderToPrint(null)}
                 className="absolute top-4 right-4 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition print:hidden"
