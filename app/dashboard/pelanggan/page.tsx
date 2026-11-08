@@ -2859,7 +2859,7 @@ export default function PelangganDashboardPage() {
                     <div className="flex justify-between">
 
                       <span className="text-gray-400">Metode Bayar:</span>
-                      <span className="font-bold text-gray-900">QRIS Instan <span className="text-emerald-700 font-semibold text-[11px]">(Lunas)</span></span>
+                      <span className="font-bold text-gray-900">QRIS Instan</span>
                     </div>
                     <div className="flex justify-between items-start">
                       <span className="text-gray-400">Tujuan Dana:</span>
@@ -3369,7 +3369,6 @@ export default function PelangganDashboardPage() {
                       <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
                       <td className="py-1">
                         <span className="font-bold text-gray-900">QRIS Instan</span>
-                        <span className="text-[11px] text-emerald-700 font-semibold ml-1.5">(Otomatis Lunas)</span>
                       </td>
                     </tr>
                   </tbody>
@@ -3398,7 +3397,7 @@ export default function PelangganDashboardPage() {
                       <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
                       <td className="py-1">
                         <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          ✓ LUNAS OTOMATIS
+                          LUNAS
                         </span>
                       </td>
                     </tr>
