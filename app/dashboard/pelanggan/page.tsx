@@ -74,7 +74,11 @@ import {
 
   ExternalLink,
 
-  Sparkles
+  Sparkles,
+
+  ShoppingCart,
+
+  Minus
 
 } from 'lucide-react';
 
@@ -95,6 +99,16 @@ interface Produk {
   deskripsi: string;
   gambar_url?: string;
   terjual?: number;
+}
+
+interface CartItem {
+  cart_id: string;
+  produk: Produk;
+  jumlah: number;
+  varian_rasa: string;
+  ukuran_plastik: string;
+  harga_per_bal: number;
+  total_harga: number;
 }
 
 
@@ -190,6 +204,18 @@ export default function PelangganDashboardPage() {
   const [orderPlastik, setOrderPlastik] = useState<string>('1/2 kg');
 
   const [orderMetode, setOrderMetode] = useState<string>('tunai');
+
+  // State Keranjang Belanja (Multi-varian)
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [cartMetode, setCartMetode] = useState<string>('tunai');
+  const [isSubmittingCart, setIsSubmittingCart] = useState<boolean>(false);
+
+  // State Modal Tambah ke Keranjang
+  const [addToCartProduct, setAddToCartProduct] = useState<Produk | null>(null);
+  const [cartQty, setCartQty] = useState<number>(1);
+  const [cartVarian, setCartVarian] = useState<string>('Original');
+  const [cartPlastik, setCartPlastik] = useState<string>('1/2 kg');
 
 
 
@@ -334,6 +360,214 @@ export default function PelangganDashboardPage() {
     return () => clearInterval(interval);
 
   }, [pelanggan]);
+
+  // Load keranjang belanja dari localStorage saat pertama kali dimuat
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ekrupsy_cart');
+      if (saved) {
+        setCart(JSON.parse(saved));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveCart = (newCart: CartItem[]) => {
+    setCart(newCart);
+    try {
+      localStorage.setItem('ekrupsy_cart', JSON.stringify(newCart));
+    } catch {
+      // ignore
+    }
+  };
+
+  // 1. Buka Modal Tambah ke Keranjang
+  const handleOpenAddToCartModal = (item: Produk) => {
+    setAddToCartProduct(item);
+    setCartQty(1);
+    setCartVarian('Original');
+    setCartPlastik('1/2 kg');
+    setActionState({ type: 'idle', message: null });
+  };
+
+  // 2. Konfirmasi Masukkan Item ke Keranjang Belanja
+  const handleConfirmAddToCart = () => {
+    if (!addToCartProduct) return;
+    if (cartQty < 1) {
+      setActionState({ type: 'error', message: 'Jumlah pemesanan minimal 1 Bal.' });
+      return;
+    }
+    if (cartQty > addToCartProduct.stok) {
+      setActionState({
+        type: 'error',
+        message: `Jumlah melebihi stok yang tersedia (${addToCartProduct.stok} Bal).`,
+      });
+      return;
+    }
+
+    const cartId = `${addToCartProduct.id_produk}_${cartVarian}_${cartPlastik}`;
+    const hargaSatuanKerupuk = Number(addToCartProduct.harga) || 0;
+    const hargaBumbu = getHargaBumbu(cartVarian);
+    const hargaPlastik = getHargaPlastik(cartPlastik);
+    const hargaPerBal = hargaSatuanKerupuk + hargaBumbu + hargaPlastik;
+
+    const existingIndex = cart.findIndex((it) => it.cart_id === cartId);
+    let updatedCart: CartItem[];
+
+    if (existingIndex >= 0) {
+      const newQty = cart[existingIndex].jumlah + cartQty;
+      if (newQty > addToCartProduct.stok) {
+        setActionState({
+          type: 'error',
+          message: `Total varian ini di keranjang (${newQty} Bal) melebihi stok pabrik (${addToCartProduct.stok} Bal).`,
+        });
+        return;
+      }
+      updatedCart = [...cart];
+      updatedCart[existingIndex].jumlah = newQty;
+      updatedCart[existingIndex].total_harga = newQty * hargaPerBal;
+    } else {
+      const newItem: CartItem = {
+        cart_id: cartId,
+        produk: addToCartProduct,
+        jumlah: cartQty,
+        varian_rasa: cartVarian,
+        ukuran_plastik: cartPlastik,
+        harga_per_bal: hargaPerBal,
+        total_harga: cartQty * hargaPerBal,
+      };
+      updatedCart = [...cart, newItem];
+    }
+
+    saveCart(updatedCart);
+    const addedProdName = addToCartProduct.nama_produk;
+    setAddToCartProduct(null);
+    setActionState({
+      type: 'success',
+      message: `"${addedProdName}" (${cartVarian}, ${cartPlastik} - ${cartQty} Bal) berhasil ditambahkan ke keranjang belanja!`,
+    });
+  };
+
+  // 3. Update Qty di Dalam Keranjang Belanja
+  const handleUpdateCartQty = (cartId: string, delta: number) => {
+    const updated = cart
+      .map((it) => {
+        if (it.cart_id === cartId) {
+          const newQty = it.jumlah + delta;
+          if (newQty <= 0) return null;
+          if (newQty > it.produk.stok) {
+            setActionState({
+              type: 'error',
+              message: `Stok ${it.produk.nama_produk} hanya tersedia ${it.produk.stok} Bal.`,
+            });
+            return it;
+          }
+          return {
+            ...it,
+            jumlah: newQty,
+            total_harga: newQty * it.harga_per_bal,
+          };
+        }
+        return it;
+      })
+      .filter(Boolean) as CartItem[];
+
+    saveCart(updated);
+  };
+
+  // 4. Hapus 1 Item dari Keranjang
+  const handleRemoveFromCart = (cartId: string) => {
+    const updated = cart.filter((it) => it.cart_id !== cartId);
+    saveCart(updated);
+  };
+
+  // 5. Kosongkan Keranjang Belanja
+  const handleClearCart = () => {
+    if (confirm('Kosongkan semua produk dalam keranjang belanja Anda?')) {
+      saveCart([]);
+    }
+  };
+
+  // 6. Checkout Seluruh Item di Keranjang Belanja (Batch Order)
+  const handleCheckoutCart = async () => {
+    if (!pelanggan?.id_pelanggan) {
+      setActionState({ type: 'error', message: 'Sesi pelanggan tidak ditemukan. Silakan login ulang.' });
+      return;
+    }
+    if (cart.length === 0) {
+      setActionState({ type: 'error', message: 'Keranjang belanja Anda masih kosong.' });
+      return;
+    }
+
+    setIsSubmittingCart(true);
+    setActionState({ type: 'loading', message: 'Memproses pemesanan seluruh item dari keranjang...' });
+
+    try {
+      const payload = {
+        id_pelanggan: pelanggan.id_pelanggan,
+        metode_pembayaran: cartMetode,
+        items: cart.map((it) => ({
+          id_produk: it.produk.id_produk,
+          jumlah: it.jumlah,
+          varian_rasa: it.varian_rasa,
+          ukuran_plastik: it.ukuran_plastik,
+        })),
+      };
+
+      const res = await fetch('/api/pesanan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal memproses pesanan keranjang.' });
+        setIsSubmittingCart(false);
+        return;
+      }
+
+      const totalItemsCount = cart.length;
+      const totalBayar = resData.totalAmount || cart.reduce((sum, it) => sum + it.total_harga, 0);
+
+      // Bersihkan keranjang belanja
+      saveCart([]);
+      setIsCartOpen(false);
+
+      setActionState({
+        type: 'success',
+        message: `Berhasil memesan ${totalItemsCount} varian kerupuk dari keranjang! Semua pesanan masuk antrean pabrik.`,
+      });
+
+      await fetchData();
+
+      // Jika metode pembayaran QRIS, buka modal QRIS untuk total tagihan keranjang
+      if (cartMetode === 'qris' && Array.isArray(resData.data) && resData.data.length > 0) {
+        const combinedQrisOrder: Pesanan = {
+          ...resData.data[0],
+          total_harga: totalBayar,
+          pembayaran: [
+            {
+              id_pembayaran: 0,
+              metode_pembayaran: 'qris',
+              status_pembayaran: 'pending',
+              jumlah_bayar: totalBayar,
+            },
+          ],
+        };
+        setQrisModalOrder(combinedQrisOrder);
+        setQrisReceiptData(null);
+      }
+
+      setActiveTab('pesanan_saya');
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat memproses pesanan keranjang.' });
+    } finally {
+      setIsSubmittingCart(false);
+    }
+  };
 
 
 
@@ -1119,54 +1353,48 @@ export default function PelangganDashboardPage() {
 
 
 
-        {/* Tabs: Katalog vs Pesanan Saya */}
+        {/* Tabs: Katalog vs Pesanan Saya + Tombol Keranjang Belanja */}
+        <div className="flex flex-wrap items-center justify-between border-b border-gray-200 gap-2">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('katalog')}
+              className={`py-3 px-6 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                activeTab === 'katalog'
+                  ? 'border-brand-maroon text-brand-maroon'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Katalog Kerupuk ({produkList.length})
+            </button>
 
-        <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('pesanan_saya')}
+              className={`py-3 px-6 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                activeTab === 'pesanan_saya'
+                  ? 'border-brand-maroon text-brand-maroon'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              Pesanan Saya ({pesananList.length})
+            </button>
+          </div>
 
+          {/* Tombol Akses Cepat Keranjang Belanja */}
           <button
-
-            onClick={() => setActiveTab('katalog')}
-
-            className={`py-3 px-6 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
-
-              activeTab === 'katalog'
-
-                ? 'border-brand-maroon text-brand-maroon'
-
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-
-            }`}
-
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className="mb-2 px-4 py-2 rounded-2xl bg-amber-50 hover:bg-amber-100 text-brand-darkmaroon border border-amber-300 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition active:scale-95"
+            title="Buka Keranjang Belanja"
           >
-
-            <ShoppingBag className="w-4 h-4" />
-
-            Katalog Kerupuk ({produkList.length})
-
+            <ShoppingCart className="w-4 h-4 text-brand-maroon" />
+            <span className="hidden sm:inline">Keranjang Belanja</span>
+            <span className="sm:hidden">Keranjang</span>
+            <span className="bg-brand-maroon text-white text-[11px] font-black px-2 py-0.5 rounded-full min-w-[20px] text-center">
+              {cart.length}
+            </span>
           </button>
-
-          <button
-
-            onClick={() => setActiveTab('pesanan_saya')}
-
-            className={`py-3 px-6 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
-
-              activeTab === 'pesanan_saya'
-
-                ? 'border-brand-maroon text-brand-maroon'
-
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-
-            }`}
-
-          >
-
-            <Clock className="w-4 h-4" />
-
-            Pesanan Saya ({pesananList.length})
-
-          </button>
-
         </div>
 
 
@@ -1230,193 +1458,81 @@ export default function PelangganDashboardPage() {
                 {filteredProducts.map((item) => (
 
                   <div
-
                     key={item.id_produk}
-
                     className="group bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-amber-300/80 transition-all duration-300 flex flex-col justify-between"
-
                   >
-
-                    {/* Header Foto Produk Besar (Katalog Apps Belanja Online) */}
-
+                    {/* Header Foto Produk Besar (Bersih Tanpa Badge Berlebihan) */}
                     <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-amber-50 via-orange-50/40 to-amber-100/30 overflow-hidden border-b border-gray-100">
-
                       {item.gambar_url ? (
-
                         <img
-
                           src={item.gambar_url}
-
                           alt={item.nama_produk}
-
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-
                         />
-
                       ) : (
-
                         <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-100/60 to-orange-100/60 text-amber-800 p-4">
-
                           <span className="text-5xl mb-1 filter drop-shadow select-none">🍘</span>
-
                           <span className="text-[10px] font-black text-amber-900/70 uppercase tracking-widest text-center">
-
                             Pabrik Kerupuk Diansyah
-
                           </span>
-
                         </div>
-
                       )}
-
-
-
-                      {/* Badge Brand & Best Seller (Top Left) */}
-
-                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-
-                        <span className="bg-brand-maroon/90 backdrop-blur-md text-amber-300 text-[10px] font-black px-2.5 py-1 rounded-full shadow-md uppercase tracking-wider flex items-center gap-1 border border-amber-300/30">
-
-                          <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-
-                          Diansyah
-
-                        </span>
-
-                        {(item.terjual ?? 0) >= 10 && (
-
-                          <span className="bg-amber-500/95 backdrop-blur-md text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase tracking-wider flex items-center gap-1">
-
-                            🔥 Terlaris
-
-                          </span>
-
-                        )}
-
-                      </div>
-
-
-
-                      {/* Badge Ketersediaan Stok (Top Right) */}
-
-                      <span
-
-                        className={`absolute top-3 right-3 text-[11px] font-bold px-3 py-1 rounded-full backdrop-blur-md shadow-md z-10 transition ${
-
-                          item.stok > 0
-
-                            ? 'bg-emerald-600/90 text-white border border-emerald-400/30'
-
-                            : 'bg-rose-600/90 text-white border border-rose-400/30'
-
-                        }`}
-
-                      >
-
-                        {item.stok > 0 ? `Stok: ${item.stok} ${item.satuan}` : 'Stok Habis'}
-
-                      </span>
-
                     </div>
-
-
 
                     {/* Informasi Produk & Keterangan Terjual */}
-
                     <div className="p-5 flex-1 flex flex-col justify-between">
-
                       <div>
-
                         <h3 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-brand-maroon transition-colors leading-snug line-clamp-1">
-
                           {item.nama_produk}
-
                         </h3>
-
                         <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
-
                           {item.deskripsi || 'Kerupuk khas renyah dan gurih produksi Pabrik Kerupuk Diansyah.'}
-
                         </p>
-
                       </div>
-
-
 
                       <div className="mt-4 pt-3 border-t border-gray-100">
-
                         <div className="flex items-baseline justify-between">
-
                           <span className="text-xs text-gray-400 font-medium">Harga / {item.satuan}:</span>
-
                           <span className="text-lg sm:text-xl font-black text-brand-maroon tracking-tight font-mono">
-
                             Rp {Number(item.harga).toLocaleString('id-ID')}
-
                           </span>
-
                         </div>
 
-
-
-                        {/* Keterangan Terjual Real-Time Otomatis */}
-
+                        {/* Keterangan Terjual Real-Time Otomatis (Tanpa keterangan stok) */}
                         <div className="mt-3 pt-2.5 border-t border-dashed border-gray-200 flex items-center justify-between text-xs">
-
                           <div className="flex items-center gap-1.5 font-bold text-amber-900 bg-amber-50/90 border border-amber-200/80 px-2.5 py-1 rounded-lg">
-
                             <ShoppingBag className="w-3.5 h-3.5 text-brand-maroon shrink-0" />
-
                             <span>{item.terjual ?? 0} terjual</span>
-
                           </div>
-
-                          <span className="text-[11px] text-gray-500 font-medium">
-
-                            {item.stok > 0 ? (
-
-                              <>Tersedia <strong className="text-gray-700">{item.stok} {item.satuan}</strong></>
-
-                            ) : (
-
-                              <span className="text-red-500 font-bold">Stok Habis</span>
-
-                            )}
-
-                          </span>
-
                         </div>
-
                       </div>
-
                     </div>
 
-
-
-                    {/* Tombol Pesan Sekarang */}
-
-                    <div className="p-3.5 bg-gray-50/80 border-t border-gray-100">
-
+                    {/* Tombol Aksi: Tambah Keranjang & Pesan Langsung */}
+                    <div className="p-3.5 bg-gray-50/80 border-t border-gray-100 flex items-center gap-2">
                       <button
-
-                        onClick={() => handleOpenOrderModal(item)}
-
+                        type="button"
+                        onClick={() => handleOpenAddToCartModal(item)}
                         disabled={item.stok <= 0}
-
-                        className="w-full flex items-center justify-center gap-2 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs sm:text-sm font-bold py-3 px-4 rounded-xl transition shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold py-2.5 px-2 rounded-xl transition shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Tambah varian ini ke keranjang belanja"
                       >
-
-                        <Plus className="w-4 h-4" />
-
-                        {item.stok > 0 ? 'Pesan Sekarang' : 'Stok Kosong'}
-
+                        <ShoppingCart className="w-3.5 h-3.5 text-amber-700" />
+                        <span>+ Keranjang</span>
                       </button>
 
+                      <button
+                        type="button"
+                        onClick={() => handleOpenOrderModal(item)}
+                        disabled={item.stok <= 0}
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold py-2.5 px-2 rounded-xl transition shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Langsung pesan varian ini sekarang"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{item.stok > 0 ? 'Pesan Sekarang' : 'Habis'}</span>
+                      </button>
                     </div>
-
                   </div>
-
                 ))}
 
               </div>
@@ -1910,6 +2026,387 @@ export default function PelangganDashboardPage() {
         )}
 
 
+
+        {/* FLOATING ACTION BUTTON KERANJANG BELANJA */}
+        {cart.length > 0 && (
+          <aside aria-label="Keranjang Belanja Mengambang" className="fixed bottom-6 right-6 z-40 animate-fadeIn">
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="flex items-center gap-3 bg-brand-maroon hover:bg-brand-darkmaroon text-white px-5 py-3.5 rounded-full shadow-2xl border-2 border-amber-400 font-bold text-sm transition-all transform hover:scale-105 active:scale-95"
+            >
+              <div className="relative">
+                <ShoppingCart className="w-5 h-5 text-amber-300" />
+                <span className="absolute -top-2 -right-2 bg-amber-400 text-brand-darkmaroon text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              </div>
+              <span>
+                Keranjang ({cart.length} Varian &bull; Rp {cart.reduce((sum, it) => sum + it.total_harga, 0).toLocaleString('id-ID')})
+              </span>
+            </button>
+          </aside>
+        )}
+
+        {/* MODAL TAMBAH KE KERANJANG */}
+        {addToCartProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+                <div className="flex items-center gap-3">
+                  {addToCartProduct.gambar_url ? (
+                    <img
+                      src={addToCartProduct.gambar_url}
+                      alt={addToCartProduct.nama_produk}
+                      className="w-14 h-14 rounded-2xl object-cover border border-amber-200/60 shadow-sm shrink-0"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-2xl shrink-0">
+                      🍘
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base leading-tight">
+                      Tambah ke Keranjang
+                    </h3>
+                    <p className="text-xs text-brand-maroon font-bold mt-0.5">
+                      {addToCartProduct.nama_produk} &bull; Rp {Number(addToCartProduct.harga).toLocaleString('id-ID')}/{addToCartProduct.satuan}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAddToCartProduct(null)}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* 1. Jumlah Pesanan */}
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-bold text-gray-700">
+                      Jumlah Pesanan ({addToCartProduct.satuan}) <span className="text-red-500">*</span>
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setCartQty((q) => Math.max(1, q - 1))}
+                      className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700 transition active:scale-95"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max={addToCartProduct.stok}
+                      value={cartQty}
+                      onChange={(e) => setCartQty(Math.max(1, Math.min(addToCartProduct.stok, parseInt(e.target.value) || 1)))}
+                      className="flex-1 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-center text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCartQty((q) => Math.min(addToCartProduct.stok, q + 1))}
+                      className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700 transition active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Pilihan Varian Rasa */}
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1.5">
+                    Pilihan Varian Rasa
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DAFTAR_VARIAN_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setCartVarian(opt.id)}
+                        className={`p-2.5 rounded-xl border text-left text-xs transition flex flex-col justify-between ${
+                          cartVarian === opt.id
+                            ? 'bg-amber-50 border-brand-maroon text-brand-maroon font-bold ring-1 ring-brand-maroon'
+                            : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <span>{opt.label}</span>
+                        <span className="text-[10px] text-gray-500 font-normal">
+                          {opt.harga > 0 ? `+Rp ${opt.harga.toLocaleString('id-ID')}` : 'Gratis'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Pilihan Ukuran Plastik Kemasan */}
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1.5">
+                    Pilihan Kemasan Plastik
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {DAFTAR_PLASTIK_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setCartPlastik(opt.id)}
+                        className={`p-2 rounded-xl border text-center text-xs transition ${
+                          cartPlastik === opt.id
+                            ? 'bg-amber-50 border-brand-maroon text-brand-maroon font-bold ring-1 ring-brand-maroon'
+                            : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="block font-semibold">{opt.label}</span>
+                        <span className="text-[10px] text-gray-500 block">
+                          {opt.harga > 0 ? `+Rp ${opt.harga.toLocaleString('id-ID')}` : 'Gratis'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Subtotal Item */}
+                {(() => {
+                  const base = Number(addToCartProduct.harga) || 0;
+                  const bumbu = getHargaBumbu(cartVarian);
+                  const plastik = getHargaPlastik(cartPlastik);
+                  const perBal = base + bumbu + plastik;
+                  const total = perBal * cartQty;
+                  return (
+                    <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-gray-500 block">Subtotal Varian Ini:</span>
+                        <span className="text-[11px] text-gray-400">
+                          {cartQty} Bal &bull; Rp {perBal.toLocaleString('id-ID')}/Bal
+                        </span>
+                      </div>
+                      <span className="text-base font-black text-brand-maroon font-mono">
+                        Rp {total.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAddToCartProduct(null)}
+                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmAddToCart}
+                    className="py-3 px-4 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-1.5"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>+ Masukkan Keranjang</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL / DRAWER KERANJANG BELANJA */}
+        {isCartOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col justify-between">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-100 text-brand-darkmaroon flex items-center justify-center font-bold shadow-sm">
+                    <ShoppingCart className="w-5 h-5 text-brand-maroon" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-gray-900 text-base">Keranjang Belanja</h3>
+                    <p className="text-xs text-gray-500">
+                      {cart.length > 0 ? `${cart.length} varian kerupuk siap dipesan` : 'Keranjang masih kosong'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {cart.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearCart}
+                      className="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition"
+                    >
+                      Kosongkan
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsCartOpen(false)}
+                    className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body Item List */}
+              <div className="flex-1 overflow-y-auto pr-1 space-y-3 max-h-[50vh]">
+                {cart.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+                    <h4 className="font-bold text-gray-700 text-base">Keranjang Masih Kosong</h4>
+                    <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
+                      Pilih aneka kerupuk lezat di katalog, lalu klik "+ Keranjang" untuk memesan beberapa varian sekaligus.
+                    </p>
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <div
+                      key={item.cart_id}
+                      className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200/80 flex items-center gap-3 hover:border-amber-300 transition"
+                    >
+                      {item.produk.gambar_url ? (
+                        <img
+                          src={item.produk.gambar_url}
+                          alt={item.produk.nama_produk}
+                          className="w-16 h-16 rounded-xl object-cover border border-amber-200/60 shadow-sm shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-2xl shrink-0">
+                          🍘
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 text-sm truncate">
+                          {item.produk.nama_produk}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <span className="text-[10px] font-semibold bg-amber-100/80 text-amber-900 px-2 py-0.5 rounded-md">
+                            Rasa: {item.varian_rasa}
+                          </span>
+                          <span className="text-[10px] font-semibold bg-blue-50 text-blue-800 px-2 py-0.5 rounded-md">
+                            Kemasan: {item.ukuran_plastik}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-400">
+                          Rp {item.harga_per_bal.toLocaleString('id-ID')} / {item.produk.satuan}
+                        </div>
+                      </div>
+
+                      {/* Qty Controls & Price */}
+                      <div className="flex flex-col items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFromCart(item.cart_id)}
+                          className="text-gray-400 hover:text-red-500 transition p-1"
+                          title="Hapus item ini"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateCartQty(item.cart_id, -1)}
+                            className="w-6 h-6 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-700 transition active:scale-95"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-bold text-xs text-gray-900 min-w-[20px] text-center font-mono">
+                            {item.jumlah}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateCartQty(item.cart_id, 1)}
+                            className="w-6 h-6 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-700 transition active:scale-95"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        <span className="font-black text-brand-maroon text-xs sm:text-sm font-mono">
+                          Rp {item.total_harga.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer Checkout */}
+              {cart.length > 0 && (
+                <div className="pt-4 border-t border-gray-200 mt-3 space-y-3">
+                  {/* Pilihan Metode Pembayaran */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1.5">
+                      Pilihan Metode Pembayaran
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      {[
+                        { id: 'tunai', label: 'Tunai di Pabrik' },
+                        { id: 'transfer', label: 'Transfer BCA' },
+                        { id: 'qris', label: 'QRIS Instan' },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setCartMetode(m.id)}
+                          className={`p-2 rounded-xl border text-center transition font-semibold text-xs ${
+                            cartMetode === m.id
+                              ? 'bg-brand-50 border-brand-maroon text-brand-maroon ring-1 ring-brand-maroon'
+                              : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ringkasan Total */}
+                  {(() => {
+                    const totalQty = cart.reduce((sum, it) => sum + it.jumlah, 0);
+                    const grandTotal = cart.reduce((sum, it) => sum + it.total_harga, 0);
+                    return (
+                      <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-gray-500 block">Total Pembayaran ({totalQty} Bal):</span>
+                          <span className="text-[11px] text-gray-400">{cart.length} Varian Kerupuk</span>
+                        </div>
+                        <span className="text-lg font-black text-brand-maroon font-mono">
+                          Rp {grandTotal.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsCartOpen(false)}
+                      className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
+                    >
+                      Kembali Belanja
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCheckoutCart}
+                      disabled={isSubmittingCart}
+                      className="py-3 px-4 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-amber-300" />
+                      <span>{isSubmittingCart ? 'Memproses...' : 'Checkout & Pesan Semua'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* MODAL 1: FORM PEMESANAN MANDIRI (SDD UC-02 & UC-03) */}
 

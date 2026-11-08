@@ -54,8 +54,132 @@ export async function POST(req: NextRequest) {
       varian_rasa = 'Original',
       ukuran_plastik = '1/2 kg',
       metode_pembayaran = 'tunai',
+      items,
     } = body;
 
+    // A. JIKA PEMESANAN MELALUI KERANJANG BELANJA (BATCH MULTI-VARIAN)
+    if (Array.isArray(items) && items.length > 0) {
+      if (!id_pelanggan) {
+        return NextResponse.json({ message: 'ID Pelanggan wajib disertakan.' }, { status: 400 });
+      }
+
+      // 1. Validasi awal ketersediaan stok seluruh item dalam keranjang
+      const productIds = items.map((it: any) => Number(it.id_produk));
+      const { data: prodsData, error: prodsErr } = await supabase
+        .from('produk')
+        .select('id_produk, nama_produk, harga, stok')
+        .in('id_produk', productIds);
+
+      if (prodsErr || !prodsData) {
+        return NextResponse.json({ message: 'Gagal memvalidasi katalog produk di database.' }, { status: 500 });
+      }
+
+      const prodMap = new Map(prodsData.map((p) => [p.id_produk, p]));
+
+      // Hitung total akumulasi qty per produk yang dipesan di keranjang
+      const requestedQtyMap: Record<number, number> = {};
+      for (const it of items) {
+        const pId = Number(it.id_produk);
+        const q = Number(it.jumlah) || 1;
+        requestedQtyMap[pId] = (requestedQtyMap[pId] || 0) + q;
+      }
+
+      for (const [pIdStr, totalReq] of Object.entries(requestedQtyMap)) {
+        const pId = Number(pIdStr);
+        const prod = prodMap.get(pId);
+        if (!prod) {
+          return NextResponse.json({ message: `Produk ID #${pId} tidak ditemukan.` }, { status: 404 });
+        }
+        if (prod.stok < totalReq) {
+          return NextResponse.json({
+            message: `Stok produk ${prod.nama_produk} tidak mencukupi (sisa ${prod.stok} Bal, diminta ${totalReq} Bal).`,
+          }, { status: 400 });
+        }
+      }
+
+      // 2. Proses pembuatan pesanan satu per satu
+      const createdOrders = [];
+      let grandTotal = 0;
+
+      for (const it of items) {
+        const pId = Number(it.id_produk);
+        const qty = Number(it.jumlah) || 1;
+        const rasa = it.varian_rasa || 'Original';
+        const plastik = it.ukuran_plastik || '1/2 kg';
+        const prod = prodMap.get(pId)!;
+
+        const hargaKerupukSatuan = Number(prod.harga) || 0;
+        const hargaBumbu = getHargaBumbu(rasa);
+        const hargaPlastik = getHargaPlastik(plastik);
+        const hargaPerBal = hargaKerupukSatuan + hargaBumbu + hargaPlastik;
+        const totalHarga = hargaPerBal * qty;
+        grandTotal += totalHarga;
+
+        // Insert pesanan
+        const { data: orderData, error: orderErr } = await supabase
+          .from('pesanan')
+          .insert({
+            id_pelanggan: Number(id_pelanggan),
+            id_produk: pId,
+            jumlah: qty,
+            varian_rasa: rasa,
+            ukuran_plastik: plastik,
+            total_harga: totalHarga,
+            status_pesanan: 'menunggu_diproses',
+          })
+          .select()
+          .single();
+
+        if (orderErr || !orderData) {
+          return NextResponse.json({ message: `Gagal membuat pesanan untuk ${prod.nama_produk}: ` + orderErr?.message }, { status: 500 });
+        }
+
+        // Insert pembayaran
+        await supabase
+          .from('pembayaran')
+          .insert({
+            id_pesanan: orderData.id_pesanan,
+            id_pelanggan: Number(id_pelanggan),
+            metode_pembayaran,
+            jumlah_bayar: totalHarga,
+            status_pembayaran: 'pending',
+          });
+
+        // Insert produksi
+        await supabase
+          .from('produksi')
+          .insert({
+            id_pesanan: orderData.id_pesanan,
+            id_produk: pId,
+            status_produksi: 'menunggu',
+          });
+
+        // Potong stok produk katalog
+        await supabase
+          .from('produk')
+          .update({ stok: Math.max(0, prod.stok - qty) })
+          .eq('id_produk', pId);
+        prod.stok = Math.max(0, prod.stok - qty);
+
+        // Potong stok bahan baku di gudang
+        await deductAllMaterialsOnOrder(supabase, prod.nama_produk, qty, rasa, plastik);
+
+        createdOrders.push({
+          ...orderData,
+          produk: prod,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Berhasil memesan ${createdOrders.length} varian kerupuk dari keranjang belanja! Total: Rp ${grandTotal.toLocaleString('id-ID')}`,
+        data: createdOrders,
+        isBatch: true,
+        totalAmount: grandTotal,
+      });
+    }
+
+    // B. JIKA PEMESANAN LANGSUNG 1 VARIAN ("PESAN SEKARANG")
     // 4 Jenis Validasi Input (Existence, Data Type, Domain, Format)
     const validation = validateForm([
       { field: 'id_pelanggan', label: 'ID Pelanggan', value: id_pelanggan, required: true, dataType: 'integer' },
