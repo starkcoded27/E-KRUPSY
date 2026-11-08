@@ -20,7 +20,28 @@ export async function GET() {
     return NextResponse.json({ message: 'Gagal mengambil data produk: ' + error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, data });
+  // Hitung jumlah terjual secara live otomatis dari tabel pesanan (hanya pesanan aktif/selesai, bukan dibatalkan)
+  const { data: pesananList, error: orderErr } = await supabase
+    .from('pesanan')
+    .select('id_produk, jumlah, status_pesanan');
+
+  const soldMap: Record<number, number> = {};
+  if (!orderErr && Array.isArray(pesananList)) {
+    for (const ord of pesananList) {
+      if (ord.id_produk && ord.status_pesanan !== 'dibatalkan') {
+        const qty = Number(ord.jumlah) || 0;
+        soldMap[ord.id_produk] = (soldMap[ord.id_produk] || 0) + qty;
+      }
+    }
+  }
+
+  // Gabungkan jumlah terjual ke masing-masing produk
+  const enrichedProducts = (data || []).map((prod: any) => ({
+    ...prod,
+    terjual: (soldMap[prod.id_produk] || 0) + (Number(prod.terjual) || 0),
+  }));
+
+  return NextResponse.json({ success: true, data: enrichedProducts });
 }
 
 export async function POST(req: NextRequest) {

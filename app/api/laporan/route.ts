@@ -100,11 +100,23 @@ export async function GET(req: NextRequest) {
       .select('*')
       .order('id_pelanggan', { ascending: false });
 
-    // Ambil seluruh katalog produk pabrik
+    // Ambil seluruh katalog produk pabrik & hitung jumlah terjual
     const { data: produkList } = await supabase
       .from('produk')
       .select('*')
       .order('id_produk', { ascending: true });
+
+    const soldMap: Record<number, number> = {};
+    validOrders.forEach((o) => {
+      if (o.id_produk) {
+        soldMap[o.id_produk] = (soldMap[o.id_produk] || 0) + (Number(o.jumlah) || 0);
+      }
+    });
+
+    const enrichedProdukList = (produkList || []).map((prod) => ({
+      ...prod,
+      terjual: (soldMap[prod.id_produk] || 0) + (Number(prod.terjual) || 0),
+    }));
 
     // Perhitungan Data Diagram Omset Keuangan (Harian, Mingguan, Bulanan, Tahunan)
     const chartData = generateChartData(validOrders);
@@ -122,7 +134,7 @@ export async function GET(req: NextRequest) {
         totalProses: inProgressOrders.length,
         orders,
         pelangganList: pelangganList || [],
-        produkList: produkList || [],
+        produkList: enrichedProdukList,
         rekapMetode,
         produkBreakdown,
         stockList,

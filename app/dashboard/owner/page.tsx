@@ -101,6 +101,7 @@ interface ProdukCatalogItem {
   stok: number;
   deskripsi?: string;
   gambar_url?: string;
+  terjual?: number;
 }
 
 interface LaporanData {
@@ -1236,6 +1237,7 @@ export default function OwnerDashboardPage() {
                         <th className="py-3 px-3">Nama Produk Kerupuk</th>
                         <th className="py-3 px-3">Satuan</th>
                         <th className="py-3 px-3">Harga Jual</th>
+                        <th className="py-3 px-3 text-center">Volume Terjual</th>
                         <th className="py-3 px-3">Kapasitas Stok Jual</th>
                         <th className="py-3 px-3">Status Stok</th>
                         <th className="py-3 px-3">Keterangan</th>
@@ -1254,10 +1256,10 @@ export default function OwnerDashboardPage() {
                                   <img
                                     src={prod.gambar_url}
                                     alt={prod.nama_produk}
-                                    className="w-12 h-12 rounded-xl object-cover border border-gray-200 shadow-sm shrink-0"
+                                    className="w-14 h-14 rounded-xl object-cover border border-gray-200 shadow-sm shrink-0"
                                   />
                                 ) : (
-                                  <span className="w-12 h-12 rounded-xl bg-brand-50 text-brand-maroon flex items-center justify-center font-bold text-base shrink-0 border border-brand-100 shadow-inner">
+                                  <span className="w-14 h-14 rounded-xl bg-brand-50 text-brand-maroon flex items-center justify-center font-bold text-base shrink-0 border border-brand-100 shadow-inner">
                                     🍘
                                   </span>
                                 )}
@@ -1279,6 +1281,12 @@ export default function OwnerDashboardPage() {
                             <td className="py-3 px-3 font-medium text-gray-700">{prod.satuan}</td>
                             <td className="py-3 px-3 font-mono font-bold text-gray-900">
                               Rp {Number(prod.harga).toLocaleString('id-ID')}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <span className="inline-flex items-center gap-1 font-bold text-xs text-amber-900 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-lg">
+                                <ShoppingBag className="w-3 h-3 text-amber-700" />
+                                {prod.terjual ?? 0} {prod.satuan}
+                              </span>
                             </td>
                             <td className="py-3 px-3">
                               <span className="font-bold text-gray-900 block">{prod.stok} {prod.satuan}</span>

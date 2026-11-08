@@ -41,3 +41,15 @@ export interface LoginInput {
   usernameOrEmail: string;
   password: string;
 }
+
+export interface Produk {
+  id_produk: number;
+  nama_produk: string;
+  satuan: string;
+  harga: number;
+  stok: number;
+  deskripsi?: string;
+  gambar_url?: string;
+  terjual?: number;
+  created_at?: string;
+}

@@ -72,7 +72,9 @@ import {
 
   Download,
 
-  ExternalLink
+  ExternalLink,
+
+  Sparkles
 
 } from 'lucide-react';
 
@@ -92,6 +94,7 @@ interface Produk {
 
   deskripsi: string;
   gambar_url?: string;
+  terjual?: number;
 }
 
 
@@ -1204,43 +1207,111 @@ export default function PelangganDashboardPage() {
 
             {/* Product Cards Grid */}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProducts.length === 0 ? (
 
-              {filteredProducts.map((item) => (
+              <div className="bg-white rounded-3xl p-12 text-center border border-gray-200 shadow-sm">
 
-                <div
+                <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
 
-                  key={item.id_produk}
+                <h4 className="font-bold text-gray-800 text-base">Produk Tidak Ditemukan</h4>
 
-                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between"
+                <p className="text-xs text-gray-500 mt-1">
 
-                >
+                  Tidak ada varian kerupuk yang sesuai dengan kata kunci "{searchQuery}".
 
-                  <div className="p-5">
+                </p>
 
-                    <div className="flex items-center justify-between mb-3">
+              </div>
+
+            ) : (
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+                {filteredProducts.map((item) => (
+
+                  <div
+
+                    key={item.id_produk}
+
+                    className="group bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-amber-300/80 transition-all duration-300 flex flex-col justify-between"
+
+                  >
+
+                    {/* Header Foto Produk Besar (Katalog Apps Belanja Online) */}
+
+                    <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-amber-50 via-orange-50/40 to-amber-100/30 overflow-hidden border-b border-gray-100">
 
                       {item.gambar_url ? (
-    <img
-      src={item.gambar_url}
-      alt={item.nama_produk}
-      className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-amber-200/50"
-    />
-  ) : (
-    <span className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-2xl shadow-inner">
-      🍘
-    </span>
-  )}
 
-                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                        <img
 
-                        item.stok > 0 
+                          src={item.gambar_url}
 
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                          alt={item.nama_produk}
 
-                          : 'bg-red-50 text-red-700 border border-red-200'
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
 
-                      }`}>
+                        />
+
+                      ) : (
+
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-100/60 to-orange-100/60 text-amber-800 p-4">
+
+                          <span className="text-5xl mb-1 filter drop-shadow select-none">🍘</span>
+
+                          <span className="text-[10px] font-black text-amber-900/70 uppercase tracking-widest text-center">
+
+                            Pabrik Kerupuk Diansyah
+
+                          </span>
+
+                        </div>
+
+                      )}
+
+
+
+                      {/* Badge Brand & Best Seller (Top Left) */}
+
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+
+                        <span className="bg-brand-maroon/90 backdrop-blur-md text-amber-300 text-[10px] font-black px-2.5 py-1 rounded-full shadow-md uppercase tracking-wider flex items-center gap-1 border border-amber-300/30">
+
+                          <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+
+                          Diansyah
+
+                        </span>
+
+                        {(item.terjual ?? 0) >= 10 && (
+
+                          <span className="bg-amber-500/95 backdrop-blur-md text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase tracking-wider flex items-center gap-1">
+
+                            🔥 Terlaris
+
+                          </span>
+
+                        )}
+
+                      </div>
+
+
+
+                      {/* Badge Ketersediaan Stok (Top Right) */}
+
+                      <span
+
+                        className={`absolute top-3 right-3 text-[11px] font-bold px-3 py-1 rounded-full backdrop-blur-md shadow-md z-10 transition ${
+
+                          item.stok > 0
+
+                            ? 'bg-emerald-600/90 text-white border border-emerald-400/30'
+
+                            : 'bg-rose-600/90 text-white border border-rose-400/30'
+
+                        }`}
+
+                      >
 
                         {item.stok > 0 ? `Stok: ${item.stok} ${item.satuan}` : 'Stok Habis'}
 
@@ -1250,53 +1321,107 @@ export default function PelangganDashboardPage() {
 
 
 
-                    <h3 className="text-base font-bold text-gray-900 leading-snug">{item.nama_produk}</h3>
+                    {/* Informasi Produk & Keterangan Terjual */}
 
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.deskripsi || 'Kerupuk khas renyah dan gurih.'}</p>
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+
+                      <div>
+
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-brand-maroon transition-colors leading-snug line-clamp-1">
+
+                          {item.nama_produk}
+
+                        </h3>
+
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+
+                          {item.deskripsi || 'Kerupuk khas renyah dan gurih produksi Pabrik Kerupuk Diansyah.'}
+
+                        </p>
+
+                      </div>
 
 
 
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-baseline justify-between">
+                      <div className="mt-4 pt-3 border-t border-gray-100">
 
-                      <span className="text-xs text-gray-400">Harga / {item.satuan}:</span>
+                        <div className="flex items-baseline justify-between">
 
-                      <span className="text-lg font-black text-brand-maroon">
+                          <span className="text-xs text-gray-400 font-medium">Harga / {item.satuan}:</span>
 
-                        Rp {Number(item.harga).toLocaleString('id-ID')}
+                          <span className="text-lg sm:text-xl font-black text-brand-maroon tracking-tight font-mono">
 
-                      </span>
+                            Rp {Number(item.harga).toLocaleString('id-ID')}
+
+                          </span>
+
+                        </div>
+
+
+
+                        {/* Keterangan Terjual Real-Time Otomatis */}
+
+                        <div className="mt-3 pt-2.5 border-t border-dashed border-gray-200 flex items-center justify-between text-xs">
+
+                          <div className="flex items-center gap-1.5 font-bold text-amber-900 bg-amber-50/90 border border-amber-200/80 px-2.5 py-1 rounded-lg">
+
+                            <ShoppingBag className="w-3.5 h-3.5 text-brand-maroon shrink-0" />
+
+                            <span>{item.terjual ?? 0} terjual</span>
+
+                          </div>
+
+                          <span className="text-[11px] text-gray-500 font-medium">
+
+                            {item.stok > 0 ? (
+
+                              <>Tersedia <strong className="text-gray-700">{item.stok} {item.satuan}</strong></>
+
+                            ) : (
+
+                              <span className="text-red-500 font-bold">Stok Habis</span>
+
+                            )}
+
+                          </span>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+
+
+                    {/* Tombol Pesan Sekarang */}
+
+                    <div className="p-3.5 bg-gray-50/80 border-t border-gray-100">
+
+                      <button
+
+                        onClick={() => handleOpenOrderModal(item)}
+
+                        disabled={item.stok <= 0}
+
+                        className="w-full flex items-center justify-center gap-2 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs sm:text-sm font-bold py-3 px-4 rounded-xl transition shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+
+                      >
+
+                        <Plus className="w-4 h-4" />
+
+                        {item.stok > 0 ? 'Pesan Sekarang' : 'Stok Kosong'}
+
+                      </button>
 
                     </div>
 
                   </div>
 
+                ))}
 
+              </div>
 
-                  <div className="p-3 bg-gray-50 border-t border-gray-100">
-
-                    <button
-
-                      onClick={() => handleOpenOrderModal(item)}
-
-                      disabled={item.stok <= 0}
-
-                      className="w-full flex items-center justify-center gap-2 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-
-                    >
-
-                      <Plus className="w-4 h-4" />
-
-                      {item.stok > 0 ? 'Pesan Sekarang' : 'Stok Kosong'}
-
-                    </button>
-
-                  </div>
-
-                </div>
-
-              ))}
-
-            </div>
+            )}
 
           </div>
 
@@ -1796,19 +1921,53 @@ export default function PelangganDashboardPage() {
 
               <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
 
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-maroon flex items-center justify-center font-bold">
+                  {selectedProduct.gambar_url ? (
 
-                    🍘
+                    <img
 
-                  </div>
+                      src={selectedProduct.gambar_url}
+
+                      alt={selectedProduct.nama_produk}
+
+                      className="w-14 h-14 rounded-2xl object-cover border border-amber-200/60 shadow-sm shrink-0"
+
+                    />
+
+                  ) : (
+
+                    <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-2xl shrink-0">
+
+                      🍘
+
+                    </div>
+
+                  )}
 
                   <div>
 
-                    <h3 className="font-bold text-gray-900 text-base">Konfirmasi Pemesanan</h3>
+                    <h3 className="font-bold text-gray-900 text-base leading-tight">{selectedProduct.nama_produk}</h3>
 
-                    <p className="text-[11px] text-gray-500">{selectedProduct.nama_produk}</p>
+                    <div className="flex items-center gap-2 mt-1">
+
+                      <span className="text-xs font-black text-brand-maroon font-mono">
+
+                        Rp {Number(selectedProduct.harga).toLocaleString('id-ID')}/{selectedProduct.satuan}
+
+                      </span>
+
+                      <span className="text-gray-300">&bull;</span>
+
+                      <span className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 flex items-center gap-1">
+
+                        <ShoppingBag className="w-3 h-3 text-amber-700" />
+
+                        {selectedProduct.terjual ?? 0} terjual
+
+                      </span>
+
+                    </div>
 
                   </div>
 
