@@ -91,7 +91,7 @@ interface Produk {
   stok: number;
 
   deskripsi: string;
-
+  gambar_url?: string;
 }
 
 
@@ -1220,11 +1220,17 @@ export default function PelangganDashboardPage() {
 
                     <div className="flex items-center justify-between mb-3">
 
-                      <span className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-2xl shadow-inner">
-
-                        🍘
-
-                      </span>
+                      {item.gambar_url ? (
+    <img
+      src={item.gambar_url}
+      alt={item.nama_produk}
+      className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-amber-200/50"
+    />
+  ) : (
+    <span className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-2xl shadow-inner">
+      🍘
+    </span>
+  )}
 
                       <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
 
