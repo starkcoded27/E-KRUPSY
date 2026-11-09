@@ -232,9 +232,6 @@ export default function StaffPembungkusDashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
               Verifikasi Mutu & Pengemasan Plastik
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-blue-100/90 leading-relaxed">
-              Halo, <strong>{user?.nama}</strong>. Periksa kerenyahan fisik kerupuk dari penggorengan, verifikasi jumlah pesanan, dan selesaikan packing plastik.
-            </p>
           </div>
 
           <div className="mt-4 flex gap-2">

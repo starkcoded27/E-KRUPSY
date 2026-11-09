@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { ShoppingCart, X, Trash2, Plus, Minus, CheckCircle2 } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import React, { useState } from 'react';
+import { ShoppingCart, X, Trash2, Plus, Minus, CheckCircle2, Building2, Copy, Check } from 'lucide-react';
+import { formatVarianRasa, DAFTAR_REKENING_BANK } from '@/lib/pricing';
 import { CartItem } from '../types';
 
 interface PelangganCartDrawerProps {
@@ -30,6 +30,14 @@ export default function PelangganCartDrawer({
   onUpdateQty,
   onCheckout,
 }: PelangganCartDrawerProps) {
+  const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
+
+  const handleCopyAccount = (noRek: string, bankName: string) => {
+    navigator.clipboard?.writeText(noRek);
+    setCopiedAccount(bankName);
+    setTimeout(() => setCopiedAccount(null), 2500);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -163,7 +171,7 @@ export default function PelangganCartDrawer({
               <div className="grid grid-cols-3 gap-2 text-xs">
                 {[
                   { id: 'tunai', label: 'Tunai di Pabrik' },
-                  { id: 'transfer', label: 'Transfer BCA' },
+                  { id: 'transfer', label: 'Transfer Bank' },
                   { id: 'qris', label: 'QRIS Instan' },
                 ].map((m) => (
                   <button
@@ -180,6 +188,45 @@ export default function PelangganCartDrawer({
                   </button>
                 ))}
               </div>
+
+              {/* Rincian Pilihan Rekening Resmi (BCA, Mandiri, BJB) */}
+              {cartMetode === 'transfer' && (
+                <div className="mt-3 p-3 rounded-2xl bg-blue-50/80 border border-blue-200 text-xs space-y-2 animate-fadeIn max-h-48 overflow-y-auto">
+                  <div className="flex items-center gap-1.5 text-blue-900 font-bold">
+                    <Building2 className="w-4 h-4 text-blue-700" />
+                    <span>Pilihan Rekening Resmi Pabrik Kerupuk Diansyah:</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {DAFTAR_REKENING_BANK.map((rek) => (
+                      <div
+                        key={rek.id}
+                        className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100 shadow-xs"
+                      >
+                        <div>
+                          <span className="font-bold text-gray-900 text-[11px] block">{rek.bank}</span>
+                          <span className="font-mono font-black text-blue-900 text-xs">{rek.nomor}</span>
+                          <span className="text-[10px] text-gray-400 block">a/n {rek.pemilik}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyAccount(rek.nomor, rek.bank)}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
+                        >
+                          {copiedAccount === rek.bank ? (
+                            <Check className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                          <span>{copiedAccount === rek.bank ? 'Tersalin' : 'Salin'}</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-blue-700 leading-tight">
+                    * Silakan transfer ke salah satu rekening di atas (BCA, Mandiri, atau BJB). Setelah checkout, Anda dapat mengunggah bukti screenshot transfer.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Ringkasan Total */}

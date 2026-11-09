@@ -6,14 +6,14 @@
 
 // Tarif Tambahan Bumbu / Varian Rasa (per Bal)
 export const HARGA_BUMBU: Record<string, number> = {
-  'Original': 50000,
-  'Original Gurih': 50000,
-  'Pedas': 50000,
-  'Pedas Level 5': 50000,
-  'Balado': 40000,
   'Balado Manis Pedas': 40000,
-  'Keju': 36000,
+  'Balado': 40000,
   'Keju Asin Gurih': 36000,
+  'Keju': 36000,
+  'Original Gurih': 50000,
+  'Original': 50000,
+  'Pedas Level 5': 50000,
+  'Pedas': 50000,
 };
 
 // Tarif Tambahan Kemasan Plastik (per Bal)
@@ -64,11 +64,21 @@ export function formatVarianRasa(varian?: string): string {
 export function getHargaBumbu(varian: string): number {
   if (!varian) return 0;
   const clean = varian.trim().toLowerCase();
+
+  // Pencocokan langsung tepat (Exact match)
   for (const [key, val] of Object.entries(HARGA_BUMBU)) {
-    if (clean.includes(key.toLowerCase())) {
+    if (clean === key.toLowerCase()) {
       return val;
     }
   }
+
+  // Prioritas kata kunci: "Balado" harus dicek sebelum "Pedas"
+  // karena "Balado Manis Pedas" mengandung kata "pedas"
+  if (clean.includes('balado')) return 40000;
+  if (clean.includes('keju')) return 36000;
+  if (clean.includes('pedas')) return 50000;
+  if (clean.includes('original')) return 50000;
+
   return 0;
 }
 
@@ -115,3 +125,17 @@ export function hitungTotalPesanan(
     totalHarga,
   };
 }
+
+// Rekening Resmi Transfer Bank Pabrik Kerupuk Diansyah
+export interface RekeningBank {
+  id: string;
+  bank: string;
+  nomor: string;
+  pemilik: string;
+}
+
+export const DAFTAR_REKENING_BANK: RekeningBank[] = [
+  { id: 'bca', bank: 'Bank BCA', nomor: '7405136830', pemilik: 'Anita Nurhayati' },
+  { id: 'mandiri', bank: 'Bank Mandiri', nomor: '1320023382287', pemilik: 'Diansiah Hidayat' },
+  { id: 'bjb', bank: 'Bank BJB', nomor: '0139544684100', pemilik: 'Diansiah Hidayat' },
+];

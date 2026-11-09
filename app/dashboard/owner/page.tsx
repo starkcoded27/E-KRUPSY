@@ -13,6 +13,7 @@ import {
   CreditCard,
   Users,
   Package,
+  XCircle,
 } from 'lucide-react';
 
 import {
@@ -27,6 +28,7 @@ import OwnerFinancialSummary from './components/owner-financial-summary';
 import OwnerOrderTable from './components/owner-order-table';
 import OwnerCustomerTable from './components/owner-customer-table';
 import OwnerCatalogTable from './components/owner-catalog-table';
+import OwnerCancellationDashboard from './components/owner-cancellation-dashboard';
 import { OwnerAddProductModal, OwnerEditProductModal } from './components/owner-product-modals';
 import OwnerRestockModal from './components/owner-restock-modal';
 import { OwnerTransferProofModal, OwnerQrisProofModal } from './components/owner-proof-modals';
@@ -38,7 +40,7 @@ export default function OwnerDashboardPage() {
 
   const [laporan, setLaporan] = useState<LaporanData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewSection, setViewSection] = useState<'transaksi' | 'pelanggan' | 'katalog'>('transaksi');
+  const [viewSection, setViewSection] = useState<'transaksi' | 'pelanggan' | 'katalog' | 'pembatalan'>('transaksi');
   const [chartPeriod, setChartPeriod] = useState<'harian' | 'mingguan' | 'bulanan' | 'tahunan'>('harian');
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
   const [orderFilter, setOrderFilter] = useState<'semua' | 'aktif' | 'selesai' | 'dibatalkan'>('semua');
@@ -444,6 +446,10 @@ export default function OwnerDashboardPage() {
     setActionState({ type: 'idle', message: null });
   };
 
+  const cancelledOrdersCount = (laporan?.orders || []).filter(
+    (o) => o.status_pesanan === 'dibatalkan'
+  ).length;
+
   return (
     <RoleGuard allowedRoles={['owner']} pageTitle="Dashboard Owner">
       <div className={`space-y-6 ${selectedOrderToPrint || showFinancialReportModal ? 'print:hidden' : ''}`}>
@@ -536,7 +542,7 @@ export default function OwnerDashboardPage() {
           }}
         />
 
-        {/* TABEL MANAJEMEN DATA (TRANSAKSI, KATALOG PRODUK CRUD, PELANGGAN) */}
+        {/* TABEL MANAJEMEN DATA (TRANSAKSI, KATALOG PRODUK CRUD, PELANGGAN, PEMBATALAN) */}
         <div id="section-manajemen-data" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
             <div>
@@ -551,10 +557,15 @@ export default function OwnerDashboardPage() {
                     <Users className="w-5 h-5 text-brand-maroon" />
                     Data Master Pelanggan Terdaftar
                   </>
-                ) : (
+                ) : viewSection === 'katalog' ? (
                   <>
                     <Package className="w-5 h-5 text-brand-maroon" />
                     Katalog Master Produk Kerupuk Pabrik
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-5 h-5 text-rose-600" />
+                    Dashboard Khusus Pembatalan Pesanan Pelanggan
                   </>
                 )}
               </h2>
@@ -563,12 +574,14 @@ export default function OwnerDashboardPage() {
                   ? 'Owner dapat memvalidasi penerimaan kas tunai (Cash on Delivery) dan memantau status pesanan'
                   : viewSection === 'pelanggan'
                   ? 'Daftar seluruh akun pelanggan yang terdaftar di basis data Pabrik Kerupuk Diansyah'
-                  : 'Daftar seluruh katalog varian kerupuk. Nama produk bersifat unik dan tidak dapat diduplikasi'}
+                  : viewSection === 'katalog'
+                  ? 'Daftar seluruh katalog varian kerupuk. Nama produk bersifat unik dan tidak dapat diduplikasi'
+                  : 'Monitoring seluruh pesanan yang dibatalkan oleh pelanggan dan verifikasi pengembalian alokasi stok mentah'}
               </p>
             </div>
 
-            {/* Toggle Tabs Transaksi vs Pelanggan vs Katalog Produk */}
-            <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
+            {/* Toggle Tabs Transaksi vs Pelanggan vs Katalog Produk vs Pembatalan */}
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
               <button
                 type="button"
                 onClick={() => setViewSection('transaksi')}
@@ -605,6 +618,18 @@ export default function OwnerDashboardPage() {
                 <Package className="w-3.5 h-3.5" />
                 <span>Katalog Produk ({laporan?.produkList?.length || 0})</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setViewSection('pembatalan')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  viewSection === 'pembatalan'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Pembatalan ({cancelledOrdersCount})</span>
+              </button>
             </div>
           </div>
 
@@ -619,6 +644,8 @@ export default function OwnerDashboardPage() {
               onOpenEditModal={handleOpenEditProduct}
               onDeleteProduct={handleDeleteProduct}
             />
+          ) : viewSection === 'pembatalan' ? (
+            <OwnerCancellationDashboard orders={laporan?.orders || []} />
           ) : (
             <OwnerOrderTable
               orders={laporan?.orders || []}

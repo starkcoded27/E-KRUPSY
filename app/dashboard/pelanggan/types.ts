@@ -24,6 +24,7 @@ export interface Pesanan {
   id_pelanggan: number;
   id_produk: number;
   tanggal_pesanan: string;
+  created_at?: string;
   jumlah: number;
   varian_rasa: string;
   ukuran_plastik: string;

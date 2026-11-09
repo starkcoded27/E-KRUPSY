@@ -14,12 +14,14 @@ import {
   CheckCircle2,
   RefreshCw,
   ShoppingCart,
+  XCircle,
 } from 'lucide-react';
 import { Produk, CartItem, Pesanan } from './types';
 import PelangganCartDrawer from './components/pelanggan-cart-drawer';
 import { AddToCartModal, DirectOrderModal } from './components/pelanggan-order-modals';
 import PelangganCatalogGrid from './components/pelanggan-catalog-grid';
 import PelangganHistoryList from './components/pelanggan-history-list';
+import PelangganCancellationList from './components/pelanggan-cancellation-list';
 import {
   QrisModal,
   UploadTransferProofModal,
@@ -34,7 +36,7 @@ export default function PelangganDashboardPage() {
   const [produkList, setProdukList] = useState<Produk[]>([]);
   const [pesananList, setPesananList] = useState<Pesanan[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'katalog' | 'pesanan_saya'>('katalog');
+  const [activeTab, setActiveTab] = useState<'katalog' | 'pesanan_saya' | 'pembatalan'>('katalog');
 
   // State Modal Order Langsung
   const [selectedProduct, setSelectedProduct] = useState<Produk | null>(null);
@@ -338,7 +340,7 @@ export default function PelangganDashboardPage() {
         };
         setQrisModalOrder(combinedQrisOrder);
         setQrisReceiptData(null);
-      }
+      } 
 
       setActiveTab('pesanan_saya');
     } catch {
@@ -617,6 +619,24 @@ export default function PelangganDashboardPage() {
     }
   };
 
+  // Pesan Ulang Pesanan yang Dibatalkan
+  const handleReorder = (order: Pesanan) => {
+    const targetProd = produkList.find((p) => p.id_produk === order.id_produk) || {
+      id_produk: order.id_produk,
+      nama_produk: order.produk?.nama_produk || 'Kerupuk Diansyah',
+      harga: Math.max(1000, Math.round((Number(order.total_harga) / Math.max(1, order.jumlah)) - getHargaBumbu(order.varian_rasa) - getHargaPlastik(order.ukuran_plastik))),
+      stok: 25,
+      satuan: order.produk?.satuan || 'Bal',
+      deskripsi: '',
+    };
+    setSelectedProduct(targetProd as any);
+    setOrderQty(order.jumlah);
+    setOrderVarian(order.varian_rasa);
+    setOrderPlastik(order.ukuran_plastik);
+    setOrderMetode('tunai');
+    setActionState({ type: 'idle', message: null });
+  };
+
   return (
     <RoleGuard allowedRoles={['pelanggan']} pageTitle="Dashboard Pelanggan">
       <div className={`space-y-6 ${qrisReceiptData ? 'print:hidden' : ''}`}>
@@ -631,9 +651,6 @@ export default function PelangganDashboardPage() {
               Hi, {user?.nama}!<br />
               <span className="text-amber-300 font-extrabold">Mari Pesan Kerupuk Khas Diansyah</span>
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-white/80 leading-relaxed">
-              Pesan langsung dari pabrik secara mandiri, pantau status penggorengan hingga pengemasan produk Anda secara terpadu.
-            </p>
           </div>
         </div>
 
@@ -670,49 +687,68 @@ export default function PelangganDashboardPage() {
           </button>
         </div>
 
-        {/* Tabs: Katalog vs Pesanan Saya + Tombol Keranjang Belanja */}
-        <div className="flex flex-wrap items-center justify-between border-b border-gray-200 gap-2">
-          <div className="flex">
-            <button
-              onClick={() => setActiveTab('katalog')}
-              className={`py-3 px-6 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
-                activeTab === 'katalog'
-                  ? 'border-brand-maroon text-brand-maroon'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4" />
-              Katalog Kerupuk ({produkList.length})
-            </button>
+        {/* Tabs: Katalog vs Pesanan Saya vs Riwayat Pembatalan + Tombol Keranjang Belanja */}
+        {(() => {
+          const cancelledOrders = pesananList.filter((o) => o.status_pesanan === 'dibatalkan');
+          const activeOrders = pesananList.filter((o) => o.status_pesanan !== 'dibatalkan');
 
-            <button
-              onClick={() => setActiveTab('pesanan_saya')}
-              className={`py-3 px-6 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
-                activeTab === 'pesanan_saya'
-                  ? 'border-brand-maroon text-brand-maroon'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              Pesanan Saya ({pesananList.length})
-            </button>
-          </div>
+          return (
+            <div className="flex flex-wrap items-center justify-between border-b border-gray-200 gap-2">
+              <div className="flex flex-wrap items-center">
+                <button
+                  onClick={() => setActiveTab('katalog')}
+                  className={`py-3 px-5 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                    activeTab === 'katalog'
+                      ? 'border-brand-maroon text-brand-maroon'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  Katalog Kerupuk ({produkList.length})
+                </button>
 
-          {/* Tombol Akses Cepat Keranjang Belanja */}
-          <button
-            type="button"
-            onClick={() => setIsCartOpen(true)}
-            className="mb-2 px-4 py-2 rounded-2xl bg-amber-50 hover:bg-amber-100 text-brand-darkmaroon border border-amber-300 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition active:scale-95"
-            title="Buka Keranjang Belanja"
-          >
-            <ShoppingCart className="w-4 h-4 text-brand-maroon" />
-            <span className="hidden sm:inline">Keranjang Belanja</span>
-            <span className="sm:hidden">Keranjang</span>
-            <span className="bg-brand-maroon text-white text-[11px] font-black px-2 py-0.5 rounded-full min-w-[20px] text-center">
-              {cart.length}
-            </span>
-          </button>
-        </div>
+                <button
+                  onClick={() => setActiveTab('pesanan_saya')}
+                  className={`py-3 px-5 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                    activeTab === 'pesanan_saya'
+                      ? 'border-brand-maroon text-brand-maroon'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Clock className="w-4 h-4" />
+                  Pesanan Saya ({activeOrders.length})
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('pembatalan')}
+                  className={`py-3 px-5 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                    activeTab === 'pembatalan'
+                      ? 'border-rose-600 text-rose-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <XCircle className="w-4 h-4" />
+                  Riwayat Pembatalan ({cancelledOrders.length})
+                </button>
+              </div>
+
+              {/* Tombol Akses Cepat Keranjang Belanja */}
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(true)}
+                className="mb-2 px-4 py-2 rounded-2xl bg-amber-50 hover:bg-amber-100 text-brand-darkmaroon border border-amber-300 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition active:scale-95"
+                title="Buka Keranjang Belanja"
+              >
+                <ShoppingCart className="w-4 h-4 text-brand-maroon" />
+                <span className="hidden sm:inline">Keranjang Belanja</span>
+                <span className="sm:hidden">Keranjang</span>
+                <span className="bg-brand-maroon text-white text-[11px] font-black px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                  {cart.length}
+                </span>
+              </button>
+            </div>
+          );
+        })()}
 
         {/* TAB 1: KATALOG PRODUK */}
         {activeTab === 'katalog' && (
@@ -771,6 +807,15 @@ export default function PelangganDashboardPage() {
             }}
             onCancelOrder={handleCancelOrder}
             onShowReceipt={(order) => setSelectedOrderReceipt(order)}
+            onSwitchToCatalog={() => setActiveTab('katalog')}
+          />
+        )}
+
+        {/* TAB 3: RIWAYAT PEMBATALAN PESANAN (DASHBOARD KHUSUS) */}
+        {activeTab === 'pembatalan' && (
+          <PelangganCancellationList
+            cancelledOrders={pesananList.filter((o) => o.status_pesanan === 'dibatalkan')}
+            onReorder={handleReorder}
             onSwitchToCatalog={() => setActiveTab('katalog')}
           />
         )}

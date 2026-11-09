@@ -20,6 +20,7 @@ import {
   DAFTAR_VARIAN_OPTIONS,
   DAFTAR_PLASTIK_OPTIONS,
   formatVarianRasa,
+  DAFTAR_REKENING_BANK,
 } from '@/lib/pricing';
 import { Produk } from '../types';
 
@@ -426,51 +427,23 @@ export function DirectOrderModal({
                   <span>Rekening Resmi Pabrik Kerupuk Diansyah:</span>
                 </div>
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
-                    <div>
-                      <span className="font-bold text-gray-900 text-[11px] block">Bank BCA</span>
-                      <span className="font-mono font-black text-blue-900 text-xs">7405136830</span>
-                      <span className="text-[10px] text-gray-400 block">a/n Anita Nurhayati</span>
+                  {DAFTAR_REKENING_BANK.map((rek) => (
+                    <div key={rek.id} className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100 shadow-xs">
+                      <div>
+                        <span className="font-bold text-gray-900 text-[11px] block">{rek.bank}</span>
+                        <span className="font-mono font-black text-blue-900 text-xs">{rek.nomor}</span>
+                        <span className="text-[10px] text-gray-400 block">a/n {rek.pemilik}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onCopyAccount(rek.nomor, rek.bank)}
+                        className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
+                      >
+                        {copiedAccount === rek.bank ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedAccount === rek.bank ? 'Tersalin' : 'Salin'}</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onCopyAccount('7405136830', 'BCA')}
-                      className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
-                    >
-                      {copiedAccount === 'BCA' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedAccount === 'BCA' ? 'Tersalin' : 'Salin'}</span>
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
-                    <div>
-                      <span className="font-bold text-gray-900 text-[11px] block">Bank Mandiri</span>
-                      <span className="font-mono font-black text-blue-900 text-xs">1320023382287</span>
-                      <span className="text-[10px] text-gray-400 block">a/n Diansiah Hidayat</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onCopyAccount('1320023382287', 'Mandiri')}
-                      className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
-                    >
-                      {copiedAccount === 'Mandiri' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedAccount === 'Mandiri' ? 'Tersalin' : 'Salin'}</span>
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100">
-                    <div>
-                      <span className="font-bold text-gray-900 text-[11px] block">Bank BJB</span>
-                      <span className="font-mono font-black text-blue-900 text-xs">0139544684100</span>
-                      <span className="text-[10px] text-gray-400 block">a/n Diansiah Hidayat</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onCopyAccount('0139544684100', 'BJB')}
-                      className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
-                    >
-                      {copiedAccount === 'BJB' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedAccount === 'BJB' ? 'Tersalin' : 'Salin'}</span>
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}

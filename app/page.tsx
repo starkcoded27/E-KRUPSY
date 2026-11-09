@@ -92,7 +92,7 @@ export default function WelcomePage() {
           </div>
 
           {/* Role separation quick guide */}
-          <div className="border-t border-gray-100 pt-5">
+          {/* <div className="border-t border-gray-100 pt-5">
             <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 text-center">
               Akses Berdasarkan Peran (Role)
             </h4>
@@ -129,10 +129,9 @@ export default function WelcomePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div>*/}
         </div>
-      </main>
-
+      </main> 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-white/60">
         &copy; {new Date().getFullYear()} Pabrik Kerupuk Diansyah &bull; Sistem E-KRUPSY

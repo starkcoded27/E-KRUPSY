@@ -118,9 +118,6 @@ export default function StaffPenggorengDashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
               Antrean Penggorengan & Stok Wajan
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
-              Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau ketersediaan stok bahan baku wajan dan memproses antrean penggorengan pesanan pelanggan.
-            </p>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">

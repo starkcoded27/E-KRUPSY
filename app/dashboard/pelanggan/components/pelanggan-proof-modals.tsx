@@ -14,6 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Pesanan } from '../types';
+import { DAFTAR_REKENING_BANK } from '@/lib/pricing';
 
 interface QrisModalProps {
   order: Pesanan | null;
@@ -250,21 +251,41 @@ export function UploadTransferProofModal({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
-          {/* Info Rekening */}
-          <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-blue-900">Rekening Tujuan BCA:</span>
-              <button
-                type="button"
-                onClick={() => onCopyAccount('7405136830', 'BCA')}
-                className="text-blue-700 font-bold text-[10px] flex items-center gap-1 hover:underline"
-              >
-                {copiedAccount === 'BCA' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedAccount === 'BCA' ? 'Tersalin' : 'Salin BCA'}</span>
-              </button>
+          {/* Info Rekening Resmi Pabrik (BCA, Mandiri, BJB) */}
+          <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs space-y-2">
+            <div className="flex items-center gap-1.5 text-blue-900 font-bold">
+              <Building2 className="w-4 h-4 text-blue-700" />
+              <span>Rekening Tujuan Transfer Pabrik (BCA / Mandiri / BJB):</span>
             </div>
-            <p className="font-mono text-sm font-black text-blue-950">7405136830</p>
-            <p className="text-[11px] text-gray-600">a/n Anita Nurhayati (Pabrik Kerupuk Diansyah)</p>
+            <div className="space-y-1.5">
+              {DAFTAR_REKENING_BANK.map((rek) => (
+                <div
+                  key={rek.id}
+                  className="flex items-center justify-between p-2 rounded-xl bg-white border border-blue-100 shadow-xs"
+                >
+                  <div>
+                    <span className="font-bold text-gray-900 text-[11px] block">{rek.bank}</span>
+                    <span className="font-mono font-black text-blue-900 text-xs">{rek.nomor}</span>
+                    <span className="text-[10px] text-gray-400 block">a/n {rek.pemilik}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onCopyAccount(rek.nomor, rek.bank)}
+                    className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center gap-1 transition"
+                  >
+                    {copiedAccount === rek.bank ? (
+                      <Check className="w-3 h-3 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>{copiedAccount === rek.bank ? 'Tersalin' : `Salin ${rek.bank.replace('Bank ', '')}`}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-blue-700">
+              * Silakan transfer ke salah satu rekening resmi di atas sesuai bank yang Anda gunakan.
+            </p>
           </div>
 
           <div>

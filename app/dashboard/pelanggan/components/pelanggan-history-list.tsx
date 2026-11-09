@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ShoppingBag,
   X,
@@ -41,6 +41,26 @@ export default function PelangganHistoryList({
   onShowReceipt,
   onSwitchToCatalog,
 }: PelangganHistoryListProps) {
+  const [filterStatus, setFilterStatus] = useState<'semua' | 'aktif' | 'selesai' | 'dibatalkan'>('semua');
+
+  const activeOrdersCount = orders.filter(
+    (o) => o.status_pesanan === 'menunggu_diproses' || o.status_pesanan === 'diproses'
+  ).length;
+  const completedOrdersCount = orders.filter((o) => o.status_pesanan === 'selesai').length;
+  const cancelledOrdersCount = orders.filter((o) => o.status_pesanan === 'dibatalkan').length;
+
+  const displayedOrders = orders.filter((order) => {
+    if (filterStatus === 'aktif') {
+      return order.status_pesanan === 'menunggu_diproses' || order.status_pesanan === 'diproses';
+    }
+    if (filterStatus === 'selesai') {
+      return order.status_pesanan === 'selesai';
+    }
+    if (filterStatus === 'dibatalkan') {
+      return order.status_pesanan === 'dibatalkan';
+    }
+    return true;
+  });
   const getStatusBadge = (order: Pesanan) => {
     if (order.status_pesanan === 'dibatalkan') {
       return (
@@ -122,8 +142,78 @@ export default function PelangganHistoryList({
   }
 
   return (
-    <div className="space-y-3">
-      {orders.map((order) => {
+    <div className="space-y-4">
+      {/* Filter Tabs Status Pesanan Pelanggan */}
+      <div className="flex flex-wrap items-center gap-2 pb-1">
+        <button
+          type="button"
+          onClick={() => setFilterStatus('semua')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            filterStatus === 'semua'
+              ? 'bg-brand-maroon text-white shadow-sm'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          }`}
+        >
+          <span>Semua Pesanan</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterStatus === 'semua' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>
+            {orders.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilterStatus('aktif')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            filterStatus === 'aktif'
+              ? 'bg-amber-500 text-white shadow-sm'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          }`}
+        >
+          <span>Aktif Diproses</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterStatus === 'aktif' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'}`}>
+            {activeOrdersCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilterStatus('selesai')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            filterStatus === 'selesai'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          }`}
+        >
+          <span>Selesai</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterStatus === 'selesai' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+            {completedOrdersCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilterStatus('dibatalkan')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            filterStatus === 'dibatalkan'
+              ? 'bg-rose-600 text-white shadow-sm'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          }`}
+        >
+          <span>Dibatalkan</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterStatus === 'dibatalkan' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800'}`}>
+            {cancelledOrdersCount}
+          </span>
+        </button>
+      </div>
+
+      {displayedOrders.length === 0 ? (
+        <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
+          <p className="text-xs font-semibold text-gray-500">
+            Tidak ada pesanan pada kategori filter &quot;{filterStatus}&quot;.
+          </p>
+        </div>
+      ) : (
+        displayedOrders.map((order) => {
         const payInfo = order.pembayaran?.[0];
         const isPaid = payInfo?.status_pembayaran === 'lunas';
 
@@ -313,7 +403,7 @@ export default function PelangganHistoryList({
             </div>
           </div>
         );
-      })}
+      }))}
     </div>
   );
 }
