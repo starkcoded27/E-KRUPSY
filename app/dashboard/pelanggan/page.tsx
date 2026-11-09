@@ -325,20 +325,8 @@ export default function PelangganDashboardPage() {
 
       await fetchData();
 
-      if (cartMetode === 'qris' && Array.isArray(resData.data) && resData.data.length > 0) {
-        const combinedQrisOrder: Pesanan = {
-          ...resData.data[0],
-          total_harga: totalBayar,
-          pembayaran: [
-            {
-              id_pembayaran: 0,
-              metode_pembayaran: 'qris',
-              status_pembayaran: 'pending',
-              jumlah_bayar: totalBayar,
-            },
-          ],
-        };
-        setQrisModalOrder(combinedQrisOrder);
+      if (cartMetode === 'qris' && resData.data) {
+        setQrisModalOrder(resData.data);
         setQrisReceiptData(null);
       } 
 

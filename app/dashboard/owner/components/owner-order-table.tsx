@@ -14,7 +14,7 @@ import {
   ImageIcon,
   Receipt,
 } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
 import { OrderItem } from '../types';
 
 interface OwnerOrderTableProps {
@@ -169,12 +169,40 @@ export default function OwnerOrderTable({
                       <span className="text-[10px] text-gray-400">{order.pelanggan?.no_telp || '-'}</span>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="font-bold text-gray-800">{order.produk?.nama_produk}</span>
-                      <span className="text-[11px] text-gray-500 block">
-                        {order.jumlah} {order.produk?.satuan} &bull;{' '}
-                        <strong className="text-gray-900">{formatVarianRasa(order.varian_rasa)}</strong> (
-                        {order.ukuran_plastik})
-                      </span>
+                      {(() => {
+                        const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
+                        if (cartMeta && cartMeta.items?.length) {
+                          return (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
+                                🛒 Paket Keranjang ({cartMeta.items.length} Macam &bull; {order.jumlah} Bal)
+                              </span>
+                              <div className="space-y-1 mt-1 max-w-xs">
+                                {cartMeta.items.map((it, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="text-[11px] border-b border-gray-100 last:border-none pb-0.5"
+                                  >
+                                    <strong className="text-gray-900">{it.nama_produk}</strong> ({it.jumlah} Bal) &bull;{' '}
+                                    <span className="text-orange-700">{formatVarianRasa(it.varian_rasa)}</span> (
+                                    {it.ukuran_plastik})
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <>
+                            <span className="font-bold text-gray-800">{order.produk?.nama_produk}</span>
+                            <span className="text-[11px] text-gray-500 block">
+                              {order.jumlah} {order.produk?.satuan} &bull;{' '}
+                              <strong className="text-gray-900">{formatVarianRasa(order.varian_rasa)}</strong> (
+                              {order.ukuran_plastik})
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="py-3 px-3 font-bold text-brand-maroon">
                       Rp {Number(order.total_harga).toLocaleString('id-ID')}

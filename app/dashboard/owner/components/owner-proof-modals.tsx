@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Image as ImageIcon, QrCode, Check, ExternalLink } from 'lucide-react';
 import { OrderItem } from '../types';
+import { getTransferImageSrc } from '@/lib/pricing';
 
 interface OwnerTransferProofModalProps {
   order: OrderItem | null;
@@ -64,17 +65,20 @@ export function OwnerTransferProofModal({
 
         {/* Gambar Bukti Screenshot Transfer */}
         <div className="rounded-2xl border border-gray-200 bg-gray-100 p-2 overflow-hidden flex items-center justify-center max-h-[55vh]">
-          {order.pembayaran?.[0]?.bukti_transfer ? (
-            <img
-              src={order.pembayaran[0].bukti_transfer}
-              alt="Screenshot Bukti Transfer Pelanggan"
-              className="max-h-[50vh] object-contain rounded-xl shadow-sm"
-            />
-          ) : (
-            <div className="p-8 text-center text-gray-400 text-xs">
-              Pelanggan belum mengunggah gambar bukti transfer.
-            </div>
-          )}
+          {(() => {
+            const imgSrc = getTransferImageSrc(order.pembayaran?.[0]?.bukti_transfer);
+            return imgSrc ? (
+              <img
+                src={imgSrc}
+                alt="Screenshot Bukti Transfer Pelanggan"
+                className="max-h-[50vh] object-contain rounded-xl shadow-sm"
+              />
+            ) : (
+              <div className="p-8 text-center text-gray-400 text-xs">
+                Pelanggan belum mengunggah gambar bukti transfer.
+              </div>
+            );
+          })()}
         </div>
 
         {/* Tombol Aksi Owner */}

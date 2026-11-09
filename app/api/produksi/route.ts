@@ -21,7 +21,8 @@ export async function GET() {
       *,
       pesanan:id_pesanan (
         *,
-        pelanggan (*)
+        pelanggan (*),
+        pembayaran (*)
       ),
       produk:id_produk (*),
       verifikasi:verifikasi_produksi (*)

@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Pesanan } from '../types';
-import { DAFTAR_REKENING_BANK } from '@/lib/pricing';
+import { DAFTAR_REKENING_BANK, parseCartOrderMeta, getTransferImageSrc } from '@/lib/pricing';
 
 interface QrisModalProps {
   order: Pesanan | null;
@@ -32,6 +32,7 @@ export function QrisModal({
   onClose,
 }: QrisModalProps) {
   if (!order) return null;
+  const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn print:hidden">
@@ -108,7 +109,10 @@ export function QrisModal({
                     Rp {Number(order.total_harga).toLocaleString('id-ID')}
                   </span>
                   <span className="text-[10px] text-amber-800 block mt-0.5">
-                    Pesanan #{order.id_pesanan} &bull; {order.produk?.nama_produk} ({order.jumlah} {order.produk?.satuan || 'Bal'})
+                    Pesanan #{order.id_pesanan} &bull;{' '}
+                    {cartMeta && cartMeta.items?.length
+                      ? `Paket Keranjang (${cartMeta.items.length} Varian - Total ${order.jumlah} Bal)`
+                      : `${order.produk?.nama_produk} (${order.jumlah} ${order.produk?.satuan || 'Bal'})`}
                   </span>
                 </div>
               </div>
@@ -224,6 +228,7 @@ export function UploadTransferProofModal({
   onClose,
 }: UploadTransferProofModalProps) {
   if (!order) return null;
+  const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn">
@@ -385,7 +390,7 @@ export function ProofPreviewModal({ preview, onClose }: ProofPreviewModalProps) 
 
         <div className="max-h-[65vh] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-2 text-center">
           <img
-            src={preview.image}
+            src={getTransferImageSrc(preview.image) || preview.image}
             alt="Bukti Transfer"
             className="w-full object-contain rounded-xl mx-auto shadow-sm"
           />

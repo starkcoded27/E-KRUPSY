@@ -13,7 +13,7 @@ import {
   Calendar,
   CheckCircle2,
 } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
 import { Pesanan } from '../types';
 
 interface PelangganCancellationListProps {
@@ -48,9 +48,6 @@ export default function PelangganCancellationList({
           <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-snug">
             Catatan Pesanan yang Dibatalkan
           </h2>
-          <p className="mt-1.5 text-xs sm:text-sm text-rose-100/80 leading-relaxed">
-            Daftar seluruh pesanan kerupuk yang telah dibatalkan. Setiap pembatalan pesanan secara otomatis mengembalikan alokasi bahan mentah ke dapur penggorengan pabrik.
-          </p>
         </div>
 
         {/* 3 Kartu Metrik Ringkasan Pembatalan */}
@@ -141,22 +138,47 @@ export default function PelangganCancellationList({
 
                 {/* Konten Kartu */}
                 <div className="py-4 pl-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h4 className="font-bold text-gray-900 text-base sm:text-lg">
-                      {order.produk?.nama_produk || 'Kerupuk Diansyah'}
-                    </h4>
-                    <div className="text-xs sm:text-sm text-gray-600 space-y-1 mt-1">
-                      <p>
-                        Volume: <strong className="text-gray-900">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong>
-                      </p>
-                      <p>
-                        Varian Rasa: <strong className="text-gray-900">{formatVarianRasa(order.varian_rasa)}</strong> &bull; Kemasan: <strong className="text-gray-900">{order.ukuran_plastik}</strong>
-                      </p>
-                      <p>
-                        Metode Pembayaran Asal: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
-                      </p>
-                    </div>
-                  </div>
+                  {(() => {
+                    const cartMeta = parseCartOrderMeta(payInfo?.bukti_transfer);
+                    if (cartMeta && cartMeta.items?.length) {
+                      return (
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-gray-900 text-base sm:text-lg">
+                            Paket Keranjang Belanja ({cartMeta.items.length} Varian Kerupuk)
+                          </h4>
+                          <div className="space-y-1 text-xs text-gray-600">
+                            {cartMeta.items.map((it, idx) => (
+                              <div key={idx} className="border-b border-gray-100 last:border-none pb-0.5">
+                                <strong className="text-gray-900">{it.nama_produk}</strong> ({it.jumlah} Bal) &bull;{' '}
+                                <span className="text-orange-700">{formatVarianRasa(it.varian_rasa)}</span> ({it.ukuran_plastik})
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Metode Pembayaran Asal: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-base sm:text-lg">
+                          {order.produk?.nama_produk || 'Kerupuk Diansyah'}
+                        </h4>
+                        <div className="text-xs sm:text-sm text-gray-600 space-y-1 mt-1">
+                          <p>
+                            Volume: <strong className="text-gray-900">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong>
+                          </p>
+                          <p>
+                            Varian Rasa: <strong className="text-gray-900">{formatVarianRasa(order.varian_rasa)}</strong> &bull; Kemasan: <strong className="text-gray-900">{order.ukuran_plastik}</strong>
+                          </p>
+                          <p>
+                            Metode Pembayaran Asal: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="text-right">
                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-0.5">

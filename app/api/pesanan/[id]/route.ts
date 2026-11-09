@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { refundAllMaterialsOnCancel } from '@/lib/stock-sync';
 import { invalidateCache } from '@/lib/api-cache';
+import { parseCartOrderMeta } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ export async function PATCH(
     if (action === 'cancel') {
       const { data: order, error: findErr } = await supabase
         .from('pesanan')
-        .select('*, produk:id_produk (*)')
+        .select('*, produk:id_produk (*), pembayaran (*)')
         .eq('id_pesanan', orderId)
         .single();
 
@@ -61,7 +62,34 @@ export async function PATCH(
         .eq('id_pesanan', orderId);
 
       // 4. Kembalikan stok produk di katalog dan kembalikan stok bahan mentah, bumbu, & plastik di gudang
-      if (order.id_produk && order.produk) {
+      const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
+
+      if (cartMeta && Array.isArray(cartMeta.items) && cartMeta.items.length > 0) {
+        // A. Pengembalian stok seluruh item dari pesanan keranjang
+        for (const it of cartMeta.items) {
+          const { data: prodData } = await supabase
+            .from('produk')
+            .select('stok, nama_produk')
+            .eq('id_produk', it.id_produk)
+            .single();
+
+          if (prodData) {
+            await supabase
+              .from('produk')
+              .update({ stok: prodData.stok + it.jumlah })
+              .eq('id_produk', it.id_produk);
+
+            await refundAllMaterialsOnCancel(
+              supabase,
+              it.nama_produk || prodData.nama_produk,
+              it.jumlah,
+              it.varian_rasa || 'Original Gurih',
+              it.ukuran_plastik || '1/2 kg'
+            );
+          }
+        }
+      } else if (order.id_produk && order.produk) {
+        // B. Pengembalian stok pemesanan langsung 1 produk ("Pesan Sekarang")
         await supabase
           .from('produk')
           .update({ stok: order.produk.stok + order.jumlah })
@@ -71,7 +99,7 @@ export async function PATCH(
           supabase,
           order.produk.nama_produk,
           order.jumlah,
-          order.varian_rasa || 'Original',
+          order.varian_rasa || 'Original Gurih',
           order.ukuran_plastik || '1/2 kg'
         );
       }
@@ -86,7 +114,21 @@ export async function PATCH(
 
     // 2. Pembayaran Instan via QRIS oleh Pelanggan
     if (action === 'pay_qris') {
+      const { data: payRow } = await supabase
+        .from('pembayaran')
+        .select('bukti_transfer')
+        .eq('id_pesanan', orderId)
+        .single();
+
+      let existingMeta: any = {};
+      try {
+        if (payRow?.bukti_transfer) {
+          existingMeta = JSON.parse(payRow.bukti_transfer);
+        }
+      } catch {}
+
       const qrisMeta = {
+        ...existingMeta,
         type: 'qris',
         ref_id: body.ref_id || `QRIS-KD-${Date.now().toString().slice(-8)}`,
         nmid: 'ID1025393458506',
@@ -128,14 +170,26 @@ export async function PATCH(
         return NextResponse.json({ message: 'File bukti transfer wajib diunggah.' }, { status: 400 });
       }
 
-      const transferMeta = typeof bukti_transfer === 'string' && bukti_transfer.startsWith('data:')
-        ? bukti_transfer
-        : JSON.stringify({
-            image: bukti_transfer,
-            bank_tujuan: bank_tujuan || 'Bank BCA (7405136830 a/n Anita Nurhayati)',
-            catatan: catatan || '',
-            uploaded_at: new Date().toISOString(),
-          });
+      const { data: payRow } = await supabase
+        .from('pembayaran')
+        .select('bukti_transfer')
+        .eq('id_pesanan', orderId)
+        .single();
+
+      let existingMeta: any = {};
+      try {
+        if (payRow?.bukti_transfer) {
+          existingMeta = JSON.parse(payRow.bukti_transfer);
+        }
+      } catch {}
+
+      const transferMeta = JSON.stringify({
+        ...existingMeta,
+        image: bukti_transfer,
+        bank_tujuan: bank_tujuan || 'Bank BCA (7405136830 a/n Anita Nurhayati)',
+        catatan: catatan || '',
+        uploaded_at: new Date().toISOString(),
+      });
 
       const { error: payErr } = await supabase
         .from('pembayaran')

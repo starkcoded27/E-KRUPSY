@@ -14,7 +14,7 @@ import {
   Clock,
   ShieldCheck,
 } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
 import { OrderItem } from '../types';
 
 interface OwnerCancellationDashboardProps {
@@ -189,10 +189,34 @@ export default function OwnerCancellationDashboard({ orders }: OwnerCancellation
                     </td>
 
                     <td className="py-3 px-3">
-                      <span className="font-bold text-gray-900 block">{order.produk?.nama_produk || '-'}</span>
-                      <span className="text-[11px] text-gray-600 block">
-                        {formatVarianRasa(order.varian_rasa)} &bull; {order.ukuran_plastik}
-                      </span>
+                      {(() => {
+                        const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
+                        if (cartMeta && cartMeta.items?.length) {
+                          return (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
+                                🛒 Paket Keranjang ({cartMeta.items.length} Macam)
+                              </span>
+                              <div className="space-y-0.5 mt-0.5">
+                                {cartMeta.items.map((it, idx) => (
+                                  <div key={idx} className="text-[11px] text-gray-700">
+                                    <strong>{it.nama_produk}</strong> ({it.jumlah} Bal) &bull;{' '}
+                                    <span className="text-orange-700">{formatVarianRasa(it.varian_rasa)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <>
+                            <span className="font-bold text-gray-900 block">{order.produk?.nama_produk || '-'}</span>
+                            <span className="text-[11px] text-gray-600 block">
+                              {formatVarianRasa(order.varian_rasa)} &bull; {order.ukuran_plastik}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
 
                     <td className="py-3 px-3">

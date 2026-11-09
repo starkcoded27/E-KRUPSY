@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X, ShieldCheck, CheckCircle2 } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
 import { Pesanan } from '../types';
 
 interface PelangganReceiptModalProps {
@@ -67,18 +67,49 @@ export default function PelangganReceiptModal({
 
         {/* Rincian Produk */}
         <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-200">
-          <div className="flex justify-between font-bold text-gray-900">
-            <span>
-              {order.produk?.nama_produk} ({formatVarianRasa(order.varian_rasa)})
-            </span>
-            <span>
-              {order.jumlah} {order.produk?.satuan}
-            </span>
-          </div>
-          <div className="flex justify-between text-gray-500 text-[11px]">
-            <span>Ukuran Kemasan: {order.ukuran_plastik}</span>
-            <span>Rp {Number(order.produk?.harga || 0).toLocaleString('id-ID')} / bal</span>
-          </div>
+          {(() => {
+            const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
+            if (cartMeta && cartMeta.items?.length) {
+              return (
+                <div className="space-y-2.5">
+                  <div className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex justify-between">
+                    <span>Paket Keranjang ({cartMeta.items.length} Macam)</span>
+                    <span>Total {order.jumlah} Bal</span>
+                  </div>
+                  {cartMeta.items.map((it, idx) => (
+                    <div key={idx} className="border-b border-gray-100 last:border-none pb-1.5 last:pb-0">
+                      <div className="flex justify-between font-bold text-gray-900">
+                        <span>
+                          {idx + 1}. {it.nama_produk} ({it.jumlah} {it.satuan || 'Bal'})
+                        </span>
+                        <span>Rp {Number(it.subtotal).toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500">
+                        Varian: {formatVarianRasa(it.varian_rasa)} &bull; Kemasan: {it.ukuran_plastik}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <>
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>
+                    {order.produk?.nama_produk} ({formatVarianRasa(order.varian_rasa)})
+                  </span>
+                  <span>
+                    {order.jumlah} {order.produk?.satuan}
+                  </span>
+                </div>
+                <div className="flex justify-between text-gray-500 text-[11px]">
+                  <span>Ukuran Kemasan: {order.ukuran_plastik}</span>
+                  <span>Rp {Number(order.produk?.harga || 0).toLocaleString('id-ID')} / bal</span>
+                </div>
+              </>
+            );
+          })()}
+
           <div className="flex justify-between pt-2 text-sm font-black text-emerald-700">
             <span>TOTAL SUDAH DIBAYAR:</span>
             <span className="text-base font-black text-brand-maroon">

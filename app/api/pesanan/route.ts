@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
 import { deductAllMaterialsOnOrder } from '@/lib/stock-sync';
-import { getHargaBumbu, getHargaPlastik, formatVarianRasa } from '@/lib/pricing';
+import { getHargaBumbu, getHargaPlastik, formatVarianRasa, CartOrderItem, CartBatchMetadata } from '@/lib/pricing';
 import { getCached, setCached, invalidateCache } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // A. JIKA PEMESANAN MELALUI KERANJANG BELANJA (BATCH MULTI-VARIAN)
+    // Seluruh varian kerupuk digabungkan menjadi SATU pesanan & SATU pembayaran sekaligus.
     if (Array.isArray(items) && items.length > 0) {
       if (!id_pelanggan) {
         return NextResponse.json({ message: 'ID Pelanggan wajib disertakan.' }, { status: 400 });
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       const productIds = items.map((it: any) => Number(it.id_produk));
       const { data: prodsData, error: prodsErr } = await supabase
         .from('produk')
-        .select('id_produk, nama_produk, harga, stok')
+        .select('id_produk, nama_produk, harga, stok, satuan')
         .in('id_produk', productIds);
 
       if (prodsErr || !prodsData) {
@@ -106,13 +107,14 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // 2. Proses pembuatan pesanan satu per satu
-      const createdOrders = [];
+      // 2. Rincian & kalkulasi grand total seluruh item keranjang
       let grandTotal = 0;
+      let totalQty = 0;
+      const cartItemsSummary: CartOrderItem[] = [];
 
       for (const it of items) {
         const pId = Number(it.id_produk);
-        const qty = Number(it.jumlah) || 1;
+        const qty = Math.max(1, Number(it.jumlah) || 1);
         const rasa = formatVarianRasa(it.varian_rasa || 'Original Gurih');
         const plastik = it.ukuran_plastik || '1/2 kg';
         const prod = prodMap.get(pId)!;
@@ -121,70 +123,119 @@ export async function POST(req: NextRequest) {
         const hargaBumbu = getHargaBumbu(rasa);
         const hargaPlastik = getHargaPlastik(plastik);
         const hargaPerBal = hargaKerupukSatuan + hargaBumbu + hargaPlastik;
-        const totalHarga = hargaPerBal * qty;
-        grandTotal += totalHarga;
+        const subtotal = hargaPerBal * qty;
 
-        // Insert pesanan
-        const { data: orderData, error: orderErr } = await supabase
-          .from('pesanan')
-          .insert({
-            id_pelanggan: Number(id_pelanggan),
-            id_produk: pId,
-            jumlah: qty,
-            varian_rasa: rasa,
-            ukuran_plastik: plastik,
-            total_harga: totalHarga,
-            status_pesanan: 'menunggu_diproses',
-          })
-          .select()
-          .single();
+        grandTotal += subtotal;
+        totalQty += qty;
 
-        if (orderErr || !orderData) {
-          return NextResponse.json({ message: `Gagal membuat pesanan untuk ${prod.nama_produk}: ` + orderErr?.message }, { status: 500 });
-        }
+        cartItemsSummary.push({
+          id_produk: pId,
+          nama_produk: prod.nama_produk,
+          jumlah: qty,
+          satuan: prod.satuan || 'Bal',
+          varian_rasa: rasa,
+          ukuran_plastik: plastik,
+          harga_satuan: hargaKerupukSatuan,
+          harga_per_bal: hargaPerBal,
+          subtotal,
+        });
+      }
 
-        // Insert pembayaran
-        await supabase
-          .from('pembayaran')
-          .insert({
-            id_pesanan: orderData.id_pesanan,
-            id_pelanggan: Number(id_pelanggan),
-            metode_pembayaran,
-            jumlah_bayar: totalHarga,
-            status_pembayaran: 'pending',
-          });
+      // Ringkasan label untuk tabel pesanan (varchar 50 aman)
+      const primaryProductId = cartItemsSummary[0].id_produk;
+      const summaryVarian =
+        items.length > 1
+          ? `Paket Keranjang (${items.length} Varian)`
+          : cartItemsSummary[0].varian_rasa.slice(0, 48);
+      const summaryPlastik =
+        items.length > 1 ? 'Campur Sesuai Item' : cartItemsSummary[0].ukuran_plastik.slice(0, 48);
 
-        // Insert produksi
+      // 3. Simpan TEPAT 1 BARIS ke tabel pesanan (konsolidasi satu kolom/kartu)
+      const { data: orderData, error: orderErr } = await supabase
+        .from('pesanan')
+        .insert({
+          id_pelanggan: Number(id_pelanggan),
+          id_produk: primaryProductId,
+          jumlah: totalQty,
+          varian_rasa: summaryVarian,
+          ukuran_plastik: summaryPlastik,
+          total_harga: grandTotal,
+          status_pesanan: 'menunggu_diproses',
+        })
+        .select(`
+          *,
+          produk:id_produk (*),
+          pelanggan:id_pelanggan (*)
+        `)
+        .single();
+
+      if (orderErr || !orderData) {
+        return NextResponse.json({ message: 'Gagal membuat pesanan gabungan: ' + orderErr?.message }, { status: 500 });
+      }
+
+      // 4. Simpan TEPAT 1 BARIS ke tabel pembayaran dengan grand total & rincian item dalam bukti_transfer
+      const cartMetadata: CartBatchMetadata = {
+        is_cart: true,
+        items: cartItemsSummary,
+      };
+
+      const { data: payData, error: payErr } = await supabase
+        .from('pembayaran')
+        .insert({
+          id_pesanan: orderData.id_pesanan,
+          id_pelanggan: Number(id_pelanggan),
+          metode_pembayaran,
+          jumlah_bayar: grandTotal,
+          status_pembayaran: 'pending',
+          bukti_transfer: JSON.stringify(cartMetadata),
+        })
+        .select()
+        .single();
+
+      if (payErr) {
+        console.error('Error insert pembayaran gabungan:', payErr);
+      }
+
+      // 5. Masukkan ke antrean produksi pabrik untuk setiap item produk dalam keranjang
+      for (const it of cartItemsSummary) {
         await supabase
           .from('produksi')
           .insert({
             id_pesanan: orderData.id_pesanan,
-            id_produk: pId,
+            id_produk: it.id_produk,
             status_produksi: 'menunggu',
           });
+      }
 
-        // Potong stok produk katalog
+      // 6. Potong stok katalog & stok bahan baku gudang untuk setiap item
+      for (const it of cartItemsSummary) {
+        const prod = prodMap.get(it.id_produk)!;
         await supabase
           .from('produk')
-          .update({ stok: Math.max(0, prod.stok - qty) })
-          .eq('id_produk', pId);
-        prod.stok = Math.max(0, prod.stok - qty);
+          .update({ stok: Math.max(0, prod.stok - it.jumlah) })
+          .eq('id_produk', it.id_produk);
+        prod.stok = Math.max(0, prod.stok - it.jumlah);
 
-        // Potong stok bahan baku di gudang
-        await deductAllMaterialsOnOrder(supabase, prod.nama_produk, qty, rasa, plastik);
-
-        createdOrders.push({
-          ...orderData,
-          produk: prod,
-        });
+        await deductAllMaterialsOnOrder(
+          supabase,
+          prod.nama_produk,
+          it.jumlah,
+          it.varian_rasa,
+          it.ukuran_plastik
+        );
       }
 
       invalidateCache();
 
+      const combinedOrder = {
+        ...orderData,
+        pembayaran: payData ? [payData] : [],
+      };
+
       return NextResponse.json({
         success: true,
-        message: `Berhasil memesan ${createdOrders.length} varian kerupuk dari keranjang belanja! Total: Rp ${grandTotal.toLocaleString('id-ID')}`,
-        data: createdOrders,
+        message: `Berhasil memesan ${cartItemsSummary.length} varian kerupuk dari keranjang dalam 1 pesanan & 1 pembayaran! Total: Rp ${grandTotal.toLocaleString('id-ID')}`,
+        data: combinedOrder,
         isBatch: true,
         totalAmount: grandTotal,
       });

@@ -139,3 +139,69 @@ export const DAFTAR_REKENING_BANK: RekeningBank[] = [
   { id: 'mandiri', bank: 'Bank Mandiri', nomor: '1320023382287', pemilik: 'Diansiah Hidayat' },
   { id: 'bjb', bank: 'Bank BJB', nomor: '0139544684100', pemilik: 'Diansiah Hidayat' },
 ];
+
+// Tipe data untuk pesanan gabungan dari Keranjang Belanja (Cart Batch Order)
+export interface CartOrderItem {
+  id_produk: number;
+  nama_produk: string;
+  jumlah: number;
+  satuan?: string;
+  varian_rasa: string;
+  ukuran_plastik: string;
+  harga_satuan?: number;
+  harga_per_bal?: number;
+  subtotal: number;
+}
+
+export interface CartBatchMetadata {
+  is_cart: boolean;
+  items: CartOrderItem[];
+  type?: string;
+  ref_id?: string;
+  paid_at?: string;
+  amount?: number;
+  image?: string;
+  bank_tujuan?: string;
+  catatan?: string;
+  uploaded_at?: string;
+  merchant?: string;
+  account_owner?: string;
+  customer_name?: string;
+  qris_image?: string;
+}
+
+/**
+ * Parsing metadata keranjang dari kolom bukti_transfer
+ */
+export function parseCartOrderMeta(buktiTransfer?: string | null): CartBatchMetadata | null {
+  if (!buktiTransfer) return null;
+  try {
+    const parsed = typeof buktiTransfer === 'string' ? JSON.parse(buktiTransfer) : buktiTransfer;
+    if (parsed && (parsed.is_cart || Array.isArray(parsed.items))) {
+      return parsed;
+    }
+  } catch {
+    // not valid json
+  }
+  return null;
+}
+
+/**
+ * Mengambil URL/Base64 gambar bukti transfer dari nilai string atau JSON metadata
+ */
+export function getTransferImageSrc(raw?: string | null): string | null {
+  if (!raw) return null;
+  const str = String(raw).trim();
+  if (str.startsWith('data:') || str.startsWith('http') || str.startsWith('/')) {
+    return str;
+  }
+  try {
+    const parsed = JSON.parse(str);
+    if (parsed && typeof parsed.image === 'string') {
+      return parsed.image;
+    }
+  } catch {
+    // not json
+  }
+  return str;
+}

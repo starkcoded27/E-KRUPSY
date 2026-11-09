@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ClipboardCheck, CheckCircle2 } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
 import { ProduksiItem, StokItem } from '../types';
 
 interface PembungkusTaskListProps {
@@ -50,6 +50,12 @@ export default function PembungkusTaskList({
               (item.status_produksi === 'sedang_dikemas' || hasPassedQC) && item.status_produksi !== 'selesai';
             const isReadyForQC = !isPacking && item.status_produksi === 'siap_diverifikasi';
 
+            const cartMeta = parseCartOrderMeta((item.pesanan as any)?.pembayaran?.[0]?.bukti_transfer);
+            const cartItem = cartMeta?.items?.find((c) => c.id_produk === item.id_produk);
+            const targetQty = cartItem ? cartItem.jumlah : item.pesanan?.jumlah;
+            const targetVarian = cartItem ? cartItem.varian_rasa : item.pesanan?.varian_rasa;
+            const targetKemasan = cartItem ? cartItem.ukuran_plastik : item.pesanan?.ukuran_plastik;
+
             return (
               <div
                 key={item.id_produksi}
@@ -58,7 +64,7 @@ export default function PembungkusTaskList({
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-xs font-mono font-bold bg-blue-100 text-blue-900 px-2 py-0.5 rounded-md">
-                      Pesanan #{item.id_pesanan}
+                      Pesanan #{item.id_pesanan} {cartItem ? '(Keranjang)' : ''}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -74,15 +80,15 @@ export default function PembungkusTaskList({
                   <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.produk?.nama_produk}</h3>
                   <div className="text-gray-600 mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs sm:text-sm">
                     <span>
-                      Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong>
+                      Target: <strong className="text-gray-800">{targetQty} {item.produk?.satuan || 'Bal'}</strong>
                     </span>
                     <span>
-                      Varian: <strong className="text-gray-800">{formatVarianRasa(item.pesanan?.varian_rasa)}</strong>
+                      Varian: <strong className="text-gray-800">{formatVarianRasa(targetVarian)}</strong>
                     </span>
                     <span className="flex items-center gap-1.5">
-                      Kemasan: <strong className="text-blue-700 font-bold">{item.pesanan?.ukuran_plastik}</strong>
+                      Kemasan: <strong className="text-blue-700 font-bold">{targetKemasan}</strong>
                       {(() => {
-                        const reqUkuran = String(item.pesanan?.ukuran_plastik || '').toLowerCase();
+                        const reqUkuran = String(targetKemasan || '').toLowerCase();
                         const matchingPlastic = stockList.find(
                           (s) => s.kategori === 'Plastik' && s.nama_bahan.toLowerCase().includes(reqUkuran)
                         );

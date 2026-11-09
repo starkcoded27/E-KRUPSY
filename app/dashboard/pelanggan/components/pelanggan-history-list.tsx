@@ -17,7 +17,7 @@ import {
   Trash2,
   ShieldCheck,
 } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta, getTransferImageSrc } from '@/lib/pricing';
 import { Pesanan } from '../types';
 
 interface PelangganHistoryListProps {
@@ -216,6 +216,8 @@ export default function PelangganHistoryList({
         displayedOrders.map((order) => {
         const payInfo = order.pembayaran?.[0];
         const isPaid = payInfo?.status_pembayaran === 'lunas';
+        const cartMeta = parseCartOrderMeta(payInfo?.bukti_transfer);
+        const isCartBatch = Boolean(cartMeta && cartMeta.items && cartMeta.items.length > 0);
 
         return (
           <div
@@ -228,33 +230,102 @@ export default function PelangganHistoryList({
                   ID: #{order.id_pesanan}
                 </span>
                 <span className="text-xs text-gray-400">{order.tanggal_pesanan}</span>
+                {isCartBatch && (
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    🛒 Pesanan Keranjang ({cartMeta!.items.length} Varian)
+                  </span>
+                )}
               </div>
               <div>{getStatusBadge(order)}</div>
             </div>
 
-            <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 text-lg sm:text-xl">{order.produk?.nama_produk}</h4>
-                <div className="text-sm sm:text-base text-gray-700 space-y-1.5 mt-1.5 font-normal">
-                  <p>
-                    Jumlah: <strong className="text-gray-800">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong>
-                  </p>
-                  <p>
-                    Varian: <strong className="text-gray-800">{formatVarianRasa(order.varian_rasa)}</strong> &bull; Kemasan: <strong className="text-gray-800">{order.ukuran_plastik}</strong>
-                  </p>
-                  <p>
-                    Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
-                  </p>
-                </div>
+            <div className="py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1 w-full">
+                {isCartBatch ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-gray-900 text-lg sm:text-xl">
+                        Paket Keranjang Belanja ({cartMeta!.items.length} Macam Kerupuk)
+                      </h4>
+                    </div>
+
+                    <div className="p-3.5 bg-amber-50/50 rounded-2xl border border-amber-200/80 space-y-2.5 max-w-2xl">
+                      <div className="flex items-center justify-between border-b border-amber-200/60 pb-1.5">
+                        <span className="text-xs font-bold text-amber-950">
+                          Rincian Produk Dipesan:
+                        </span>
+                        <span className="text-[11px] text-amber-800 font-semibold">
+                          Total Volume: <strong>{order.jumlah} Bal</strong>
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 divide-y divide-amber-200/50">
+                        {cartMeta!.items.map((it, idx) => (
+                          <div
+                            key={idx}
+                            className="pt-2 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs"
+                          >
+                            <div>
+                              <span className="font-bold text-gray-900 text-sm">
+                                {idx + 1}. {it.nama_produk}
+                              </span>
+                              <div className="text-[11px] text-gray-600 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <span>
+                                  Jumlah: <strong>{it.jumlah} {it.satuan || 'Bal'}</strong>
+                                </span>
+                                <span>&bull;</span>
+                                <span>
+                                  Varian: <strong className="text-orange-700">{formatVarianRasa(it.varian_rasa)}</strong>
+                                </span>
+                                <span>&bull;</span>
+                                <span>
+                                  Kemasan: <strong className="text-blue-700">{it.ukuran_plastik}</strong>
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="sm:text-right font-mono font-bold text-brand-maroon text-xs sm:text-sm">
+                              Rp {Number(it.subtotal).toLocaleString('id-ID')}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-600">
+                      Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-lg sm:text-xl">{order.produk?.nama_produk}</h4>
+                    <div className="text-sm sm:text-base text-gray-700 space-y-1.5 mt-1.5 font-normal">
+                      <p>
+                        Jumlah: <strong className="text-gray-800">{order.jumlah} {order.produk?.satuan || 'Bal'}</strong>
+                      </p>
+                      <p>
+                        Varian: <strong className="text-gray-800">{formatVarianRasa(order.varian_rasa)}</strong> &bull; Kemasan: <strong className="text-gray-800">{order.ukuran_plastik}</strong>
+                      </p>
+                      <p>
+                        Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <span className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">
                   Total Tagihan:
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-brand-maroon block">
                   Rp {Number(order.total_harga).toLocaleString('id-ID')}
                 </span>
+                {isCartBatch && (
+                  <span className="text-[10px] text-gray-400 block mt-0.5">
+                    1 Pembayaran untuk seluruh item
+                  </span>
+                )}
               </div>
             </div>
 
@@ -367,7 +438,12 @@ export default function PelangganHistoryList({
                     {payInfo?.bukti_transfer && (
                       <button
                         type="button"
-                        onClick={() => onPreviewProof(payInfo.bukti_transfer!, order.id_pesanan)}
+                        onClick={() =>
+                          onPreviewProof(
+                            getTransferImageSrc(payInfo.bukti_transfer) || '',
+                            order.id_pesanan
+                          )
+                        }
                         className="p-2 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 font-bold transition shadow-sm"
                         title="Pratinjau Bukti Transfer"
                       >

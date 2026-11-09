@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X, Printer } from 'lucide-react';
-import { formatVarianRasa } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
 import { OrderItem } from '../types';
 
 interface OwnerReceiptModalProps {
@@ -66,23 +66,54 @@ export default function OwnerReceiptModal({ order, onClose }: OwnerReceiptModalP
 
           {/* Rincian Produk */}
           <div className="py-4 space-y-2 text-xs border-b border-dashed border-gray-300">
-            <div className="flex justify-between font-bold text-gray-900">
-              <span>
-                {order.produk?.nama_produk} ({formatVarianRasa(order.varian_rasa)})
-              </span>
-              <span>
-                {order.jumlah} {order.produk?.satuan}
-              </span>
-            </div>
-            <div className="flex justify-between text-gray-500 text-[11px]">
-              <span>Ukuran Kemasan: {order.ukuran_plastik}</span>
-              <span>
-                Metode:{' '}
-                <strong className="uppercase">
-                  {order.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}
-                </strong>
-              </span>
-            </div>
+            {(() => {
+              const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
+              if (cartMeta && cartMeta.items?.length) {
+                return (
+                  <div className="space-y-2.5">
+                    <div className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex justify-between">
+                      <span>Paket Keranjang ({cartMeta.items.length} Macam)</span>
+                      <span>Total {order.jumlah} Bal</span>
+                    </div>
+                    {cartMeta.items.map((it, idx) => (
+                      <div key={idx} className="border-b border-gray-100 last:border-none pb-1.5 last:pb-0">
+                        <div className="flex justify-between font-bold text-gray-900">
+                          <span>
+                            {idx + 1}. {it.nama_produk} ({it.jumlah} {it.satuan || 'Bal'})
+                          </span>
+                          <span>Rp {Number(it.subtotal).toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="text-[10px] text-gray-500">
+                          Varian: {formatVarianRasa(it.varian_rasa)} &bull; Kemasan: {it.ukuran_plastik}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              return (
+                <>
+                  <div className="flex justify-between font-bold text-gray-900">
+                    <span>
+                      {order.produk?.nama_produk} ({formatVarianRasa(order.varian_rasa)})
+                    </span>
+                    <span>
+                      {order.jumlah} {order.produk?.satuan}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-gray-500 text-[11px]">
+                    <span>Ukuran Kemasan: {order.ukuran_plastik}</span>
+                    <span>
+                      Metode:{' '}
+                      <strong className="uppercase">
+                        {order.pembayaran?.[0]?.metode_pembayaran || 'Tunai'}
+                      </strong>
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
+
             <div className="flex justify-between pt-2 text-sm font-black text-brand-maroon">
               <span>TOTAL PEMBAYARAN:</span>
               <span>Rp {Number(order.total_harga).toLocaleString('id-ID')}</span>
@@ -209,26 +240,55 @@ export default function OwnerReceiptModal({ order, onClose }: OwnerReceiptModalP
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="py-3 px-3 text-center font-bold text-gray-600">1</td>
-                  <td className="py-3 px-3">
-                    <span className="font-bold text-gray-900 text-sm block">
-                      {order.produk?.nama_produk}
-                    </span>
-                    <span className="text-[11px] text-gray-500 font-medium">
-                      Varian: {formatVarianRasa(order.varian_rasa)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-center font-medium text-gray-700">
-                    {order.ukuran_plastik}
-                  </td>
-                  <td className="py-3 px-3 text-center font-bold text-gray-900">
-                    {order.jumlah} {order.produk?.satuan}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono font-bold text-gray-900 text-sm">
-                    Rp {Number(order.total_harga).toLocaleString('id-ID')}
-                  </td>
-                </tr>
+                {(() => {
+                  const cartMeta = parseCartOrderMeta(order.pembayaran?.[0]?.bukti_transfer);
+                  if (cartMeta && cartMeta.items?.length) {
+                    return cartMeta.items.map((it, idx) => (
+                      <tr key={idx}>
+                        <td className="py-3 px-3 text-center font-bold text-gray-600">{idx + 1}</td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-gray-900 text-sm block">
+                            {it.nama_produk}
+                          </span>
+                          <span className="text-[11px] text-gray-500 font-medium">
+                            Varian: {formatVarianRasa(it.varian_rasa)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-center font-medium text-gray-700">
+                          {it.ukuran_plastik}
+                        </td>
+                        <td className="py-3 px-3 text-center font-bold text-gray-900">
+                          {it.jumlah} {it.satuan || 'Bal'}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold text-gray-900 text-sm">
+                          Rp {Number(it.subtotal).toLocaleString('id-ID')}
+                        </td>
+                      </tr>
+                    ));
+                  }
+                  return (
+                    <tr>
+                      <td className="py-3 px-3 text-center font-bold text-gray-600">1</td>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-gray-900 text-sm block">
+                          {order.produk?.nama_produk}
+                        </span>
+                        <span className="text-[11px] text-gray-500 font-medium">
+                          Varian: {formatVarianRasa(order.varian_rasa)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center font-medium text-gray-700">
+                        {order.ukuran_plastik}
+                      </td>
+                      <td className="py-3 px-3 text-center font-bold text-gray-900">
+                        {order.jumlah} {order.produk?.satuan}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-gray-900 text-sm">
+                        Rp {Number(order.total_harga).toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  );
+                })()}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-gray-800 bg-gray-50 font-black text-sm">
