@@ -446,7 +446,7 @@ export default function OwnerDashboardPage() {
 
   return (
     <RoleGuard allowedRoles={['owner']} pageTitle="Dashboard Owner">
-      <div className={`space-y-6 ${selectedOrderToPrint ? 'print:hidden' : ''}`}>
+      <div className={`space-y-6 ${selectedOrderToPrint || showFinancialReportModal ? 'print:hidden' : ''}`}>
         {/* Banner Eksekutif Owner */}
         <div className="bg-gradient-to-r from-amber-800 via-brand-maroon to-brand-darkmaroon text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-3xl">
@@ -687,21 +687,6 @@ export default function OwnerDashboardPage() {
           onSubmit={handleRestockSubmit}
         />
 
-        {/* MODAL CETAK LAPORAN KEUANGAN */}
-        <OwnerFinancialModal
-          isOpen={showFinancialReportModal}
-          onClose={() => setShowFinancialReportModal(false)}
-          orders={laporan?.orders || []}
-          printPeriod={printPeriod}
-          setPrintPeriod={setPrintPeriod}
-          printDate={printDate}
-          setPrintDate={setPrintDate}
-          printMonth={printMonth}
-          setPrintMonth={setPrintMonth}
-          printYear={printYear}
-          setPrintYear={setPrintYear}
-        />
-
         {/* MODAL VERIFIKASI BUKTI TRANSFER */}
         <OwnerTransferProofModal
           order={selectedTransferProof}
@@ -715,6 +700,21 @@ export default function OwnerDashboardPage() {
           onClose={() => setSelectedQrisProof(null)}
         />
       </div>
+
+      {/* MODAL CETAK LAPORAN KEUANGAN */}
+      <OwnerFinancialModal
+        isOpen={showFinancialReportModal}
+        onClose={() => setShowFinancialReportModal(false)}
+        orders={laporan?.orders || []}
+        printPeriod={printPeriod}
+        setPrintPeriod={setPrintPeriod}
+        printDate={printDate}
+        setPrintDate={setPrintDate}
+        printMonth={printMonth}
+        setPrintMonth={setPrintMonth}
+        printYear={printYear}
+        setPrintYear={setPrintYear}
+      />
 
       {/* MODAL CETAK RESI RESMI (UC-13) */}
       <OwnerReceiptModal
