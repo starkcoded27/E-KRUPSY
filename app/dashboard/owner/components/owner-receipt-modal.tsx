@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { X, Printer } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
+import { X, Printer, Clock } from 'lucide-react';
+import { formatVarianRasa, parseCartOrderMeta, formatOrderDateTime } from '@/lib/pricing';
 import { OrderItem } from '../types';
 
 interface OwnerReceiptModalProps {
@@ -48,9 +48,12 @@ export default function OwnerReceiptModal({ order, onClose }: OwnerReceiptModalP
               <span className="text-gray-400">Nomor Transaksi:</span>
               <span className="font-mono font-bold text-gray-800">TRX-KD-{order.id_pesanan}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Tanggal:</span>
-              <span className="font-medium text-gray-800">{order.tanggal_pesanan}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Waktu & Tanggal:</span>
+              <span className="font-bold text-gray-800 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-brand-maroon" />
+                {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Nama Pelanggan:</span>
@@ -186,9 +189,11 @@ export default function OwnerReceiptModal({ order, onClose }: OwnerReceiptModalP
                     <td className="py-1 font-mono font-bold text-gray-900">TRX-KD-{order.id_pesanan}</td>
                   </tr>
                   <tr className="align-top">
-                    <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Tanggal Pesanan</td>
+                    <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Waktu & Tanggal</td>
                     <td className="py-1 px-1.5 text-gray-400 text-center">:</td>
-                    <td className="py-1 font-semibold text-gray-800">{order.tanggal_pesanan}</td>
+                    <td className="py-1 font-semibold text-gray-900">
+                      {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
+                    </td>
                   </tr>
                   <tr className="align-top">
                     <td className="py-1 text-gray-500 font-medium whitespace-nowrap">Metode Bayar</td>
@@ -341,7 +346,7 @@ export default function OwnerReceiptModal({ order, onClose }: OwnerReceiptModalP
             </div>
 
             <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[10px] text-gray-400">
-              Dokumen resi transaksi fisik resmi diterbitkan oleh Sistem Informasi E-KRUPSY &bull; Pabrik Kerupuk Diansyah
+              Dokumen resi transaksi fisik resmi diterbitkan oleh Sistem Informasi E-KRUPSY &bull; Waktu Pesan: {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
             </div>
           </div>
         </div>

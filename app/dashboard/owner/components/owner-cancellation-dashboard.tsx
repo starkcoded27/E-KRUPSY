@@ -14,7 +14,7 @@ import {
   Clock,
   ShieldCheck,
 } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta, formatOrderDateTime } from '@/lib/pricing';
 import { OrderItem } from '../types';
 
 interface OwnerCancellationDashboardProps {
@@ -154,7 +154,7 @@ export default function OwnerCancellationDashboard({ orders }: OwnerCancellation
           <table className="w-full text-xs text-left">
             <thead className="bg-gray-50 text-gray-500 font-semibold uppercase tracking-wider border-b border-gray-100">
               <tr>
-                <th className="py-3 px-3">ID & Tanggal</th>
+                <th className="py-3 px-3">ID & Waktu Pesanan</th>
                 <th className="py-3 px-3">Data Pelanggan</th>
                 <th className="py-3 px-3">Produk & Varian</th>
                 <th className="py-3 px-3">Volume & Bahan</th>
@@ -178,8 +178,9 @@ export default function OwnerCancellationDashboard({ orders }: OwnerCancellation
                       <span className="font-mono font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 block w-fit mb-1">
                         #{order.id_pesanan}
                       </span>
-                      <span className="text-[10px] text-gray-400 block">
-                        {order.tanggal_pesanan || order.created_at?.slice(0, 10) || '-'}
+                      <span className="text-[10px] text-gray-500 font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
                       </span>
                     </td>
 

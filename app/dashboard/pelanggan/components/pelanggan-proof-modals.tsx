@@ -12,9 +12,10 @@ import {
   Upload,
   Image as ImageIcon,
   AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import { Pesanan } from '../types';
-import { DAFTAR_REKENING_BANK, parseCartOrderMeta, getTransferImageSrc } from '@/lib/pricing';
+import { DAFTAR_REKENING_BANK, parseCartOrderMeta, getTransferImageSrc, formatOrderDateTime } from '@/lib/pricing';
 
 interface QrisModalProps {
   order: Pesanan | null;
@@ -172,9 +173,12 @@ export function QrisModal({
                 <span>ID Pesanan:</span>
                 <span className="font-mono font-bold text-gray-900">#{order.id_pesanan}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Tanggal Bayar:</span>
-                <span className="font-mono">{qrisReceiptData.tanggal || new Date().toLocaleString('id-ID')}</span>
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Waktu & Tanggal Bayar:</span>
+                <span className="font-mono font-bold text-gray-900 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-brand-maroon" />
+                  {qrisReceiptData.paidAt || qrisReceiptData.tanggal || formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
+                </span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Total Lunas:</span>
@@ -248,8 +252,13 @@ export function UploadTransferProofModal({
             </div>
             <div>
               <h3 className="font-bold text-gray-900 text-base">Upload Bukti Transfer Bank</h3>
-              <p className="text-[11px] text-gray-500">
-                Pesanan #{order.id_pesanan} &bull; Tagihan Rp {Number(order.total_harga).toLocaleString('id-ID')}
+              <p className="text-[11px] text-gray-500 flex items-center gap-1.5 flex-wrap">
+                <span>Pesanan #{order.id_pesanan} &bull; Tagihan Rp {Number(order.total_harga).toLocaleString('id-ID')}</span>
+                <span>&bull;</span>
+                <span className="flex items-center gap-1 text-[11px] text-gray-600 font-medium">
+                  <Clock className="w-3 h-3 text-brand-maroon" />
+                  {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
+                </span>
               </p>
             </div>
           </div>

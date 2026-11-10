@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { ClipboardCheck, CheckCircle2 } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
+import { ClipboardCheck, CheckCircle2, Clock } from 'lucide-react';
+import { formatVarianRasa, parseCartOrderMeta, formatOrderDateTime } from '@/lib/pricing';
 import { ProduksiItem, StokItem } from '../types';
 
 interface PembungkusTaskListProps {
@@ -62,9 +62,13 @@ export default function PembungkusTaskList({
                 className="p-4 rounded-2xl bg-gray-50 border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-blue-200 transition"
               >
                 <div>
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span className="text-xs font-mono font-bold bg-blue-100 text-blue-900 px-2 py-0.5 rounded-md">
                       Pesanan #{item.id_pesanan} {cartItem ? '(Keranjang)' : ''}
+                    </span>
+                    <span className="text-[11px] text-gray-500 font-medium flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                      <Clock className="w-3 h-3 text-blue-500" />
+                      {formatOrderDateTime((item.pesanan as any)?.created_at || (item as any).created_at, (item.pesanan as any)?.tanggal_pesanan)}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${

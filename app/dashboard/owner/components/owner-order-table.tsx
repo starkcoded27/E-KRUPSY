@@ -14,7 +14,7 @@ import {
   ImageIcon,
   Receipt,
 } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta, formatOrderDate, formatOrderTime } from '@/lib/pricing';
 import { OrderItem } from '../types';
 
 interface OwnerOrderTableProps {
@@ -133,7 +133,7 @@ export default function OwnerOrderTable({
           <thead className="bg-gray-50 text-gray-500 font-semibold uppercase tracking-wider border-y border-gray-100">
             <tr>
               <th className="py-3 px-3">ID</th>
-              <th className="py-3 px-3">Tanggal</th>
+              <th className="py-3 px-3">Tanggal & Jam</th>
               <th className="py-3 px-3">Pelanggan</th>
               <th className="py-3 px-3">Produk & Varian</th>
               <th className="py-3 px-3">Total Tagihan</th>
@@ -161,7 +161,17 @@ export default function OwnerOrderTable({
                     className={`hover:bg-gray-50/70 ${isCancelled ? 'bg-red-50/20 opacity-75' : ''}`}
                   >
                     <td className="py-3 px-3 font-mono font-bold text-gray-800">#{order.id_pesanan}</td>
-                    <td className="py-3 px-3 text-gray-500">{order.tanggal_pesanan}</td>
+                    <td className="py-3 px-3 text-gray-600">
+                      <div className="font-semibold text-gray-900 whitespace-nowrap">
+                        {formatOrderDate(order.created_at, order.tanggal_pesanan)}
+                      </div>
+                      {formatOrderTime(order.created_at) ? (
+                        <div className="text-[11px] text-brand-maroon font-bold flex items-center gap-1 mt-0.5 whitespace-nowrap">
+                          <Clock className="w-3 h-3 text-brand-maroon" />
+                          <span>{formatOrderTime(order.created_at)}</span>
+                        </div>
+                      ) : null}
+                    </td>
                     <td className="py-3 px-3">
                       <span className="font-bold text-gray-900 block">
                         {order.pelanggan?.nama_lengkap || 'Pelanggan'}

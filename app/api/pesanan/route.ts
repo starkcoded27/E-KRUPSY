@@ -150,6 +150,9 @@ export async function POST(req: NextRequest) {
       const summaryPlastik =
         items.length > 1 ? 'Campur Sesuai Item' : cartItemsSummary[0].ukuran_plastik.slice(0, 48);
 
+      const nowIso = new Date().toISOString();
+      const todayDate = nowIso.split('T')[0];
+
       // 3. Simpan TEPAT 1 BARIS ke tabel pesanan (konsolidasi satu kolom/kartu)
       const { data: orderData, error: orderErr } = await supabase
         .from('pesanan')
@@ -161,6 +164,8 @@ export async function POST(req: NextRequest) {
           ukuran_plastik: summaryPlastik,
           total_harga: grandTotal,
           status_pesanan: 'menunggu_diproses',
+          tanggal_pesanan: todayDate,
+          created_at: nowIso,
         })
         .select(`
           *,
@@ -313,6 +318,9 @@ export async function POST(req: NextRequest) {
     const hargaPerBal = hargaKerupukSatuan + hargaBumbu + hargaPlastik;
     const totalHarga = hargaPerBal * qty;
 
+    const nowIso = new Date().toISOString();
+    const todayDate = nowIso.split('T')[0];
+
     // 1. Simpan ke tabel pesanan
     const { data: orderData, error: orderErr } = await supabase
       .from('pesanan')
@@ -324,8 +332,14 @@ export async function POST(req: NextRequest) {
         ukuran_plastik,
         total_harga: totalHarga,
         status_pesanan: 'menunggu_diproses',
+        tanggal_pesanan: todayDate,
+        created_at: nowIso,
       })
-      .select()
+      .select(`
+        *,
+        produk:id_produk (*),
+        pelanggan:id_pelanggan (*)
+      `)
       .single();
 
     if (orderErr || !orderData) {

@@ -13,7 +13,7 @@ import {
   Calendar,
   CheckCircle2,
 } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta, formatOrderDateTime } from '@/lib/pricing';
 import { Pesanan } from '../types';
 
 interface PelangganCancellationListProps {
@@ -124,9 +124,9 @@ export default function PelangganCancellationList({
                     <span className="font-mono font-bold text-xs bg-rose-50 text-rose-700 px-3 py-1 rounded-lg border border-rose-200">
                       ID Pesanan: #{order.id_pesanan}
                     </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {order.tanggal_pesanan || order.created_at?.slice(0, 10)}
+                    <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-200">
+                      <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
                     </span>
                   </div>
 

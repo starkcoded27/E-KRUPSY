@@ -7,13 +7,17 @@ Repositori ini berisi implementasi perangkat lunak sistem pemesanan dan produksi
 
 ## 📂 Daftar Isi Dokumentasi
 
-1. [Alur Kerja End-to-End (`workflow-end-to-end.md`)](./workflow-end-to-end.md)
+1. **[Spesifikasi Kebutuhan Perangkat Lunak - SRS (`SRS_E-KRUPSY.md`)](./SRS_E-KRUPSY.md)**
+   Dokumen resmi IEEE 830 / ISO 29148: Definisi kebutuhan fungsional (SKF-01 s/d SKF-35), non-fungsional, matriks keterlacakan peran, aturan bisnis bumbu/plastik, formula finansial pabrik, dan siklus hidup transaksi.
+2. **[Deskripsi Perancangan Perangkat Lunak - SDD (`SDD_E-KRUPSY.md`)](./SDD_E-KRUPSY.md)**
+   Dokumen resmi IEEE 1016: Arsitektur sistem Next.js 14 + Supabase BaaS, dekomposisi subsistem UI & Core Engines, kontrak REST API endpoints, rancangan fisik 9 tabel database (ERD & PDM), sequence diagram end-to-end, state machine, dan desain cetak resi fisik/laporan A4.
+3. [Alur Kerja End-to-End (`workflow-end-to-end.md`)](./workflow-end-to-end.md)
    Penjelasan terperinci alur kerja operasional antar-peran (Pelanggan, Staf Penggoreng, Staf Pembungkus, Owner).
-2. [Validasi Input & Kondisi Sistem State (`validasi-dan-state.md`)](./validasi-dan-state.md)
+4. [Validasi Input & Kondisi Sistem State (`validasi-dan-state.md`)](./validasi-dan-state.md)
    Implementasi 4 jenis validasi input (Existence, Data Type, Domain, Format) dan 3 kondisi status sistem (Loading, Success, Error).
-3. [Spesifikasi Skema Database (`skema-database.md`)](./skema-database.md)
+5. [Spesifikasi Skema Database (`skema-database.md`)](./skema-database.md)
    Struktur 9 tabel di Supabase, kardinalitas relasi, serta akun master.
-4. [Panduan Skenario Demo Pengujian (`panduan-demo.md`)](./panduan-demo.md)
+6. [Panduan Skenario Demo Pengujian (`panduan-demo.md`)](./panduan-demo.md)
    Panduan langkah demi langkah untuk mendemonstrasikan sistem dari awal hingga selesai.
 
 ---

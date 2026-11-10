@@ -205,3 +205,56 @@ export function getTransferImageSrc(raw?: string | null): string | null {
   }
   return str;
 }
+
+/**
+ * Memformat tanggal pesanan (contoh: 10 Nov 2026)
+ */
+export function formatOrderDate(createdAt?: string | null, fallbackDate?: string | null): string {
+  const raw = createdAt || fallbackDate;
+  if (!raw) return '-';
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return fallbackDate || raw;
+    return d.toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return fallbackDate || raw;
+  }
+}
+
+/**
+ * Memformat jam pesanan dengan zona waktu WIB (contoh: 18:52 WIB)
+ */
+export function formatOrderTime(createdAt?: string | null): string {
+  if (!createdAt) return '';
+  try {
+    const hasTime = String(createdAt).includes('T') || String(createdAt).includes(':');
+    if (!hasTime) return '';
+    const d = new Date(createdAt);
+    if (isNaN(d.getTime())) return '';
+    const t = d.toLocaleTimeString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).replace('.', ':');
+    return `${t} WIB`;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Memformat tanggal & jam pesanan lengkap (contoh: 10 Nov 2026, 18:52 WIB)
+ */
+export function formatOrderDateTime(createdAt?: string | null, fallbackDate?: string | null): string {
+  const dateStr = formatOrderDate(createdAt, fallbackDate);
+  const timeStr = formatOrderTime(createdAt);
+  if (dateStr === '-') return fallbackDate || '-';
+  if (!timeStr) return dateStr;
+  return `${dateStr}, ${timeStr}`;
+}

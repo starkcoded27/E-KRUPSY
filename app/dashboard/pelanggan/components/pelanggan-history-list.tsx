@@ -17,7 +17,7 @@ import {
   Trash2,
   ShieldCheck,
 } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta, getTransferImageSrc } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta, getTransferImageSrc, formatOrderDateTime } from '@/lib/pricing';
 import { Pesanan } from '../types';
 
 interface PelangganHistoryListProps {
@@ -225,11 +225,14 @@ export default function PelangganHistoryList({
             className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono font-bold text-xs sm:text-sm bg-gray-100 text-gray-800 px-3 py-1 rounded-lg border border-gray-200">
                   ID: #{order.id_pesanan}
                 </span>
-                <span className="text-xs text-gray-400">{order.tanggal_pesanan}</span>
+                <span className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-lg font-medium">
+                  <Clock className="w-3.5 h-3.5 text-brand-maroon" />
+                  <span>{formatOrderDateTime(order.created_at, order.tanggal_pesanan)}</span>
+                </span>
                 {isCartBatch && (
                   <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
                     🛒 Pesanan Keranjang ({cartMeta!.items.length} Varian)
@@ -292,9 +295,16 @@ export default function PelangganHistoryList({
                       </div>
                     </div>
 
-                    <p className="text-xs text-gray-600">
-                      Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
-                    </p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 pt-1">
+                      <p className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                        <span>Waktu Pemesanan: <strong className="text-gray-900 font-semibold">{formatOrderDateTime(order.created_at, order.tanggal_pesanan)}</strong></span>
+                      </p>
+                      <span className="text-gray-300 hidden sm:inline">&bull;</span>
+                      <p>
+                        Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -305,6 +315,10 @@ export default function PelangganHistoryList({
                       </p>
                       <p>
                         Varian: <strong className="text-gray-800">{formatVarianRasa(order.varian_rasa)}</strong> &bull; Kemasan: <strong className="text-gray-800">{order.ukuran_plastik}</strong>
+                      </p>
+                      <p className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                        <span>Waktu Pemesanan: <strong className="text-gray-900 font-semibold">{formatOrderDateTime(order.created_at, order.tanggal_pesanan)}</strong></span>
                       </p>
                       <p>
                         Metode Pembayaran: <strong className="uppercase text-gray-800">{payInfo?.metode_pembayaran || 'Tunai'}</strong>

@@ -404,6 +404,8 @@ export default function PelangganDashboardPage() {
       if (orderMetode === 'qris' && resData.data) {
         const createdOrder: Pesanan = {
           ...resData.data,
+          tanggal_pesanan: resData.data?.tanggal_pesanan || new Date().toISOString().split('T')[0],
+          created_at: resData.data?.created_at || new Date().toISOString(),
           produk: selectedProduct,
           pembayaran: [
             {

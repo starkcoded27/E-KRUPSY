@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Clock, CheckCircle2, AlertTriangle, RefreshCw, Flame } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
+import { formatVarianRasa, parseCartOrderMeta, formatOrderDateTime } from '@/lib/pricing';
 import { ProduksiItem } from '../types';
 
 interface PenggorengTaskListProps {
@@ -55,6 +55,10 @@ export default function PenggorengTaskList({ tasks, onUpdateStatus }: Penggoreng
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span className="text-xs font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md">
                       Pesanan #{item.id_pesanan} {cartItem ? '(Keranjang)' : ''}
+                    </span>
+                    <span className="text-[11px] text-gray-500 font-medium flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                      <Clock className="w-3 h-3 text-orange-500" />
+                      {formatOrderDateTime((item.pesanan as any)?.created_at || (item as any).created_at, (item.pesanan as any)?.tanggal_pesanan)}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${

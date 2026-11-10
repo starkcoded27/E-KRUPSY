@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { X, Image as ImageIcon, QrCode, Check, ExternalLink } from 'lucide-react';
+import { X, Image as ImageIcon, QrCode, Check, ExternalLink, Clock } from 'lucide-react';
 import { OrderItem } from '../types';
-import { getTransferImageSrc } from '@/lib/pricing';
+import { getTransferImageSrc, formatOrderDateTime } from '@/lib/pricing';
 
 interface OwnerTransferProofModalProps {
   order: OrderItem | null;
@@ -35,8 +35,13 @@ export function OwnerTransferProofModal({
           </div>
           <div>
             <h3 className="font-bold text-gray-900 text-base">Verifikasi Bukti Transfer Bank</h3>
-            <p className="text-xs text-gray-400">
-              Pesanan #{order.id_pesanan} &bull; {order.pelanggan?.nama_lengkap || 'Pelanggan'}
+            <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">
+              <span>Pesanan #{order.id_pesanan} &bull; {order.pelanggan?.nama_lengkap || 'Pelanggan'}</span>
+              <span>&bull;</span>
+              <span className="flex items-center gap-1 text-[11px] text-gray-600 font-medium">
+                <Clock className="w-3 h-3 text-brand-maroon" />
+                {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
+              </span>
             </p>
           </div>
         </div>
@@ -192,10 +197,11 @@ export function OwnerQrisProofModal({ order, onClose }: OwnerQrisProofModalProps
               E-Wallet / Kas Pabrik Kerupuk Diansah
             </span>
           </div>
-          <div className="flex justify-between p-2 rounded-xl bg-gray-50">
-            <span className="text-gray-500">Waktu Scan:</span>
-            <span className="font-bold text-gray-900 text-[11px]">
-              {meta?.paid_at ? new Date(meta.paid_at).toLocaleString('id-ID') : order.tanggal_pesanan}
+          <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50">
+            <span className="text-gray-500">Waktu Scan / Transaksi:</span>
+            <span className="font-bold text-gray-900 text-[11px] flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-brand-maroon" />
+              {meta?.paid_at ? formatOrderDateTime(meta.paid_at) : formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
             </span>
           </div>
           <div className="flex justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">

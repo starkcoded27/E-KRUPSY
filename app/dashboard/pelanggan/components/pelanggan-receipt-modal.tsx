@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { X, ShieldCheck, CheckCircle2 } from 'lucide-react';
-import { formatVarianRasa, parseCartOrderMeta } from '@/lib/pricing';
+import { X, ShieldCheck, CheckCircle2, Clock } from 'lucide-react';
+import { formatVarianRasa, parseCartOrderMeta, formatOrderDateTime } from '@/lib/pricing';
 import { Pesanan } from '../types';
 
 interface PelangganReceiptModalProps {
@@ -51,9 +51,12 @@ export default function PelangganReceiptModal({
             <span className="text-gray-400">Nomor Transaksi:</span>
             <span className="font-mono font-bold text-gray-800">TRX-KD-{order.id_pesanan}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Tanggal Pemesanan:</span>
-            <span className="font-medium text-gray-800">{order.tanggal_pesanan}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">Waktu & Tanggal Pemesanan:</span>
+            <span className="font-bold text-gray-800 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-brand-maroon" />
+              {formatOrderDateTime(order.created_at, order.tanggal_pesanan)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Nama Pemesan:</span>
