@@ -5,63 +5,11 @@ import RoleGuard from '@/components/auth/role-guard';
 import { useAuth } from '@/context/auth-context';
 import StateAlert, { StateType } from '@/components/ui/state-alert';
 import { validateForm } from '@/lib/validation';
-<<<<<<< HEAD
-import { 
-  PackageCheck, 
-  CheckCircle2, 
-  Layers, 
-  ClipboardCheck, 
-  X, 
-  RefreshCw,
-  AlertTriangle,
-  Eye,
-  ShieldCheck
-} from 'lucide-react';
-
-interface ProduksiItem {
-  id_produksi: number;
-  id_pesanan: number;
-  id_produk: number;
-  tanggal_produksi: string;
-  status_produksi: string;
-  pesanan?: {
-    id_pesanan: number;
-    jumlah: number;
-    varian_rasa: string;
-    ukuran_plastik: string;
-    status_pesanan: string;
-    pelanggan?: {
-      nama_lengkap: string;
-      no_telp: string;
-    };
-  };
-  produk?: {
-    nama_produk: string;
-    satuan: string;
-  };
-  verifikasi?: {
-    id_verifikasi: number;
-    status: string;
-    keterangan: string;
-  }[];
-}
-
-interface StokItem {
-  id_stok: number;
-  nama_bahan: string;
-  kategori: string;
-  satuan: string;
-  jumlah: number;
-  tanggal_update: string;
-}
-=======
-import { PackageCheck, RefreshCw, PlusCircle } from 'lucide-react';
+import { PackageCheck, RefreshCw } from 'lucide-react';
 import { ProduksiItem, StokItem } from './types';
 import PembungkusTaskList from './components/pembungkus-task-list';
 import PembungkusStockPanel from './components/pembungkus-stock-panel';
 import PembungkusQcModal from './components/pembungkus-qc-modal';
-import PembungkusRestockModal from './components/pembungkus-restock-modal';
->>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
 
 export default function StaffPembungkusDashboardPage() {
   const { user } = useAuth();
@@ -82,15 +30,8 @@ export default function StaffPembungkusDashboardPage() {
   const [qcNotes, setQcNotes] = useState<string>('Kerenyahan sempurna, rasa merata, dan timbangan sesuai.');
   const [verifErrors, setVerifErrors] = useState<Record<string, string>>({});
 
-<<<<<<< HEAD
-=======
-  // State Modal Input Stok Plastik (UC-09)
-  const [showPlasticModal, setShowPlasticModal] = useState(false);
-  const [namaPlastik, setNamaPlastik] = useState('Plastik Ukuran 1/2 kg');
-  const [jumlahPlastik, setJumlahPlastik] = useState<number>(20);
   const isFetchingRef = useRef(false);
 
->>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
   const fetchData = async (silent = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -189,9 +130,20 @@ export default function StaffPembungkusDashboardPage() {
     }
   };
 
-  // Selesaikan Pengemasan -> 'selesai' (UC-11)
+  // Selesaikan Kemas (UC-11)
   const handleFinishPacking = async (item: ProduksiItem) => {
-    setActionState({ type: 'loading', message: 'Menandai pengemasan selesai...' });
+    const matchingPlastic = stockList.find(
+      (s) => s.kategori === 'Plastik' && s.nama_bahan.toLowerCase().includes(String(item.pesanan?.ukuran_plastik || '').toLowerCase())
+    );
+
+    if (!matchingPlastic || (matchingPlastic.jumlah || 0) <= 0) {
+      const isConfirmed = window.confirm(
+        `Perhatian: Stok "${item.pesanan?.ukuran_plastik}" di database gudang tercatat 0 atau tidak ditemukan.\n\nApakah Anda tetap ingin menyelesaikan pengemasan pesanan ini?`
+      );
+      if (!isConfirmed) return;
+    }
+
+    setActionState({ type: 'loading', message: 'Memproses penyelesaian kemasan...' });
 
     try {
       const res = await fetch('/api/produksi', {
@@ -222,56 +174,6 @@ export default function StaffPembungkusDashboardPage() {
     }
   };
 
-<<<<<<< HEAD
-  // Antrean untuk staf pembungkus:
-  // 1. Siap Diverifikasi (belum diverifikasi mutu)
-  // 2. Sedang Dikemas (telah Lolos Verifikasi mutu dan belum selesai)
-=======
-  // Handler Input Stok Plastik (UC-09)
-  const handleAddPlasticSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const validation = validateForm([
-      { field: 'nama_bahan', label: 'Nama Kemasan Plastik', value: namaPlastik, required: true, dataType: 'string' },
-      { field: 'jumlah', label: 'Jumlah Masuk (Pack)', value: jumlahPlastik, required: true, dataType: 'integer', domain: { min: 1, max: 1000 } },
-    ]);
-
-    if (!validation.isValid) {
-      setActionState({ type: 'error', message: validation.firstError });
-      return;
-    }
-
-    setActionState({ type: 'loading', message: 'Menyimpan stok plastik ke Supabase...' });
-
-    try {
-      const res = await fetch('/api/stok', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nama_bahan: namaPlastik,
-          kategori: 'Plastik',
-          satuan: 'Pack',
-          jumlah: Number(jumlahPlastik),
-          id_user: user?.id_user,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setActionState({ type: 'error', message: data.message || 'Gagal menyimpan stok plastik.' });
-        return;
-      }
-
-      setActionState({ type: 'success', message: data.message });
-      setShowPlasticModal(false);
-      await fetchData();
-    } catch {
-      setActionState({ type: 'error', message: 'Gagal menyimpan stok plastik.' });
-    }
-  };
-
->>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
   const packingTasks = productionList.filter((p) => {
     if (p.status_produksi === 'selesai') return false;
     if (p.pesanan && p.pesanan.status_pesanan === 'dibatalkan') return false;
@@ -282,7 +184,7 @@ export default function StaffPembungkusDashboardPage() {
   return (
     <RoleGuard allowedRoles={['staff_pembungkus']} pageTitle="Dashboard Staf Pembungkus">
       <div className="space-y-6">
-        {/* Banner Staf Pembungkus (Warna Selaras dengan Staf Penggoreng) */}
+        {/* Banner Staf Pembungkus */}
         <div className="bg-gradient-to-r from-orange-700 via-brand-maroon to-amber-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-400/20 text-orange-200 border border-orange-300/30 mb-3">
@@ -292,15 +194,12 @@ export default function StaffPembungkusDashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
               Verifikasi Mutu & Pengemasan Plastik
             </h1>
-<<<<<<< HEAD
             <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
               Halo, <strong>{user?.nama}</strong>. Periksa kerenyahan fisik kerupuk dari penggorengan, verifikasi jumlah pesanan, dan selesaikan packing plastik.
             </p>
-=======
->>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => fetchData()}
               disabled={isLoading}
@@ -319,21 +218,6 @@ export default function StaffPembungkusDashboardPage() {
           onClose={() => setActionState({ type: 'idle', message: null })}
         />
 
-<<<<<<< HEAD
-        {/* ANTREAN VERIFIKASI & PENGEMASAN (SDD UC-10 & UC-11) */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-            <div>
-              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <ClipboardCheck className="w-5 h-5 text-brand-maroon" />
-                Daftar Kerupuk Siap Diverifikasi & Dikemas ({packingTasks.length})
-              </h2>
-              <p className="text-xs text-gray-500">
-                Kerupuk yang telah selesai digoreng dan memerlukan verifikasi kualitas sebelum diserahkan
-              </p>
-            </div>
-          </div>
-=======
         {/* Antrean Verifikasi & Pengemasan */}
         <PembungkusTaskList
           tasks={packingTasks}
@@ -347,16 +231,9 @@ export default function StaffPembungkusDashboardPage() {
           }}
           onFinishPacking={handleFinishPacking}
         />
->>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
 
-        {/* Stok Plastik Pembungkus */}
-        <PembungkusStockPanel
-          stockList={stockList}
-          onOpenRestockModal={() => {
-            setShowPlasticModal(true);
-            setActionState({ type: 'idle', message: null });
-          }}
-        />
+        {/* Stok Plastik Pembungkus (Hanya Baca / Monitoring) */}
+        <PembungkusStockPanel stockList={stockList} />
 
         {/* Modal QC */}
         <PembungkusQcModal
@@ -370,247 +247,6 @@ export default function StaffPembungkusDashboardPage() {
           onClose={() => setVerifTarget(null)}
           onSubmit={handleVerifySubmit}
         />
-
-<<<<<<< HEAD
-                      <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.produk?.nama_produk}</h3>
-                      <div className="text-gray-600 mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs sm:text-sm">
-                        <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
-                        <span>Varian: <strong className="text-gray-800">{item.pesanan?.varian_rasa}</strong></span>
-                        <span className="flex items-center gap-1.5">
-                          Kemasan: <strong className="text-blue-700 font-bold">{item.pesanan?.ukuran_plastik}</strong>
-                          {(() => {
-                            const reqUkuran = String(item.pesanan?.ukuran_plastik || '').toLowerCase();
-                            const matchingPlastic = stockList.find(
-                              (s) => s.kategori === 'Plastik' && s.nama_bahan.toLowerCase().includes(reqUkuran)
-                            );
-                            if (!matchingPlastic || (matchingPlastic.jumlah || 0) <= 0) {
-                              return (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full animate-pulse">
-                                  ⚠ Stok Plastik Kosong di Gudang!
-                                </span>
-                              );
-                            }
-                            return (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
-                                ✓ Plastik Ready ({matchingPlastic.jumlah} {matchingPlastic.satuan})
-                              </span>
-                            );
-                          })()}
-                        </span>
-                        <span>Pelanggan: <strong className="text-gray-800">{item.pesanan?.pelanggan?.nama_lengkap || '-'}</strong></span>
-                      </div>
-
-                      {/* Feedback QC yang Tercatat */}
-                      {isPacking && item.verifikasi && item.verifikasi.length > 0 && (
-                        <div className="mt-2.5 p-2.5 rounded-xl bg-blue-50/90 border border-blue-200 text-xs max-w-lg">
-                          <div className="flex items-center gap-1.5 font-bold text-blue-900">
-                            <ClipboardCheck className="w-4 h-4 text-blue-600" />
-                            <span>Feedback QC Terkirim: {item.verifikasi[0].status}</span>
-                          </div>
-                          <p className="mt-1 text-blue-800 italic bg-white/80 p-1.5 rounded-lg border border-blue-100">
-                            &ldquo;{item.verifikasi[0].keterangan}&rdquo;
-                          </p>
-                          <span className="text-[10px] text-blue-600 mt-1 block">
-                            Status: Sedang dibungkus ke plastik &bull; Klik &quot;Selesai Kemas&quot; jika pengemasan selesai.
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      {isReadyForQC && (
-                        <button
-                          onClick={() => {
-                            setVerifTarget(item);
-                            setQcStatus('Lolos Verifikasi');
-                            setQcNotes('Kerenyahan sempurna, rasa merata, dan timbangan sesuai.');
-                            setVerifErrors({});
-                            setActionState({ type: 'idle', message: null });
-                          }}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
-                        >
-                          <ClipboardCheck className="w-4 h-4" />
-                          Verifikasi Kualitas (QC)
-                        </button>
-                      )}
-
-                      {isPacking && (
-                        <button
-                          onClick={() => handleFinishPacking(item)}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          Selesai Kemas (Siap Diambil)
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* STOK PLASTIK PEMBUNGKUS (Khusus Lihat / View Only) */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-brand-maroon" />
-                Stok Plastik Kemasan di Gudang (View Only)
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Pemantauan persediaan berbagai ukuran plastik pembungkus. Penambahan pasokan dikelola langsung oleh <strong>Owner</strong>.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-                <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                Mode: Khusus Pantau Stok (View Only)
-              </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded-xl border border-gray-200">
-                <ShieldCheck className="w-3.5 h-3.5 text-brand-maroon" />
-                Input Pasokan: Khusus Owner
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {stockList
-              .filter((s) => s.kategori === 'Plastik')
-              .map((stok) => (
-                <div
-                  key={stok.id_stok}
-                  className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between"
-                >
-                  <div>
-                    <span className="font-semibold text-gray-900 text-xs block leading-tight">{stok.nama_bahan}</span>
-                    <span className="text-sm font-black text-brand-maroon mt-1 block">
-                      {stok.jumlah} {stok.satuan}
-                    </span>
-                    <span className="text-[10px] text-gray-400">Update: {stok.tanggal_update}</span>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    stok.jumlah <= 0
-                      ? 'bg-red-100 text-red-700 border border-red-200'
-                      : stok.jumlah < 10
-                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                      : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                  }`}>
-                    {stok.jumlah <= 0 ? 'Habis' : stok.jumlah < 10 ? 'Menipis' : 'Tersedia'}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        {/* MODAL 1: FORM VERIFIKASI HASIL PRODUKSI DENGAN 4 VALIDASI (SDD UC-10) */}
-        {verifTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <ClipboardCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base">Verifikasi Mutu & QC</h3>
-                    <p className="text-[11px] text-gray-500">Pesanan #{verifTarget.id_pesanan} &bull; {verifTarget.produk?.nama_produk}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setVerifTarget(null)}
-                  className="p-1 rounded-xl text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleVerifySubmit} className="space-y-4">
-                {/* 1. Status Kelayakan (Domain Check) */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                    Hasil Pemeriksaan Fisik Kerupuk <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setQcStatus('Lolos Verifikasi')}
-                      className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 transition ${
-                        qcStatus === 'Lolos Verifikasi'
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                          : 'border-gray-200 text-gray-600'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                      <span>Lolos Verifikasi</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQcStatus('Cacat / Tidak Sesuai')}
-                      className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 transition ${
-                        qcStatus === 'Cacat / Tidak Sesuai'
-                          ? 'border-red-500 bg-red-50 text-red-800'
-                          : 'border-gray-200 text-gray-600'
-                      }`}
-                    >
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                      <span>Cacat / Rusak</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Catatan / Keterangan (Existence Check) */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Catatan Pemeriksaan Fisik <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={qcNotes}
-                    onChange={(e) => setQcNotes(e.target.value)}
-                    placeholder="Contoh: Kerenyahan dan rasa sesuai standar pabrik."
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
-                    required
-                  />
-                  {verifErrors.keterangan && (
-                    <p className="text-[11px] text-red-600 mt-1">{verifErrors.keterangan}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setVerifTarget(null)}
-                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={actionState.type === 'loading'}
-                    className="py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
-                  >
-                    {actionState.type === 'loading' ? 'Menyimpan...' : 'Simpan Verifikasi'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-=======
-        {/* Modal Restock Plastik */}
-        <PembungkusRestockModal
-          isOpen={showPlasticModal}
-          namaPlastik={namaPlastik}
-          setNamaPlastik={setNamaPlastik}
-          jumlahPlastik={jumlahPlastik}
-          setJumlahPlastik={setJumlahPlastik}
-          isLoading={actionState.type === 'loading'}
-          onClose={() => setShowPlasticModal(false)}
-          onSubmit={handleAddPlasticSubmit}
-        />
->>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
       </div>
     </RoleGuard>
   );

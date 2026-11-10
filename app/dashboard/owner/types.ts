@@ -57,6 +57,17 @@ export interface ProdukCatalogItem {
   terjual?: number;
 }
 
+export interface StokBahanItem {
+  id_stok: number;
+  id_user?: number | null;
+  nama_bahan: string;
+  kategori: string; // 'Kerupuk Mentah' | 'Bumbu' | 'Plastik'
+  satuan: string;   // 'Kg' | 'Pack' | 'Bal' | 'Pcs' | 'Bungkus'
+  jumlah: number;
+  tanggal_update: string;
+  created_at?: string;
+}
+
 export interface LaporanData {
   totalOmset: number;
   totalKasMasuk: number;
@@ -71,6 +82,6 @@ export interface LaporanData {
   produkList?: ProdukCatalogItem[];
   rekapMetode?: Record<string, { count: number; total: number; lunas: number }>;
   produkBreakdown?: { nama: string; satuan: string; jumlah: number; total: number }[];
-  stockList?: any[];
+  stockList?: StokBahanItem[];
   chartData?: ChartData;
 }

@@ -21,6 +21,7 @@ import {
   OrderItem,
   PelangganItem,
   ProdukCatalogItem,
+  StokBahanItem,
 } from './types';
 
 import OwnerStatsCards from './components/owner-stats-cards';
@@ -31,6 +32,11 @@ import OwnerCatalogTable from './components/owner-catalog-table';
 import OwnerCancellationDashboard from './components/owner-cancellation-dashboard';
 import { OwnerAddProductModal, OwnerEditProductModal } from './components/owner-product-modals';
 import OwnerRestockModal from './components/owner-restock-modal';
+import {
+  OwnerAddStockModal,
+  OwnerEditStockModal,
+  OwnerRestockMaterialModal,
+} from './components/owner-stock-modals';
 import { OwnerTransferProofModal, OwnerQrisProofModal } from './components/owner-proof-modals';
 import OwnerReceiptModal from './components/owner-receipt-modal';
 import { OwnerFinancialModal } from './components/owner-financial-modal';
@@ -79,6 +85,26 @@ export default function OwnerDashboardPage() {
   // Form Restock Produk
   const [selectedProductToRestock, setSelectedProductToRestock] = useState<ProdukCatalogItem | null>(null);
   const [restockBalQty, setRestockBalQty] = useState<number>(10);
+
+  // Form Tambah Stok Bahan / Plastik (Khusus Owner)
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [stockNama, setStockNama] = useState('');
+  const [stockKategori, setStockKategori] = useState('Plastik');
+  const [stockSatuan, setStockSatuan] = useState('Pack');
+  const [stockJumlah, setStockJumlah] = useState<number>(25);
+
+  // Form Edit Stok Bahan
+  const [showEditStockModal, setShowEditStockModal] = useState(false);
+  const [selectedStockToEdit, setSelectedStockToEdit] = useState<StokBahanItem | null>(null);
+  const [editStockNama, setEditStockNama] = useState('');
+  const [editStockKategori, setEditStockKategori] = useState('Plastik');
+  const [editStockSatuan, setEditStockSatuan] = useState('Pack');
+  const [editStockJumlah, setEditStockJumlah] = useState<number>(0);
+
+  // Form Restock Pasokan Bahan
+  const [showRestockStockModal, setShowRestockStockModal] = useState(false);
+  const [selectedStockToRestock, setSelectedStockToRestock] = useState<StokBahanItem | null>(null);
+  const [stockRestockQty, setStockRestockQty] = useState<number>(20);
 
   // Periode Cetak Laporan
   const [printPeriod, setPrintPeriod] = useState<'harian' | 'bulanan' | 'tahunan'>('harian');
@@ -446,6 +472,180 @@ export default function OwnerDashboardPage() {
     setActionState({ type: 'idle', message: null });
   };
 
+  // ==========================================
+  // HANDLER CRUD STOK BAHAN BAKU (KHUSUS OWNER)
+  // ==========================================
+
+  // Tambah Stok Bahan Baru
+  const handleAddStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockNama.trim() || stockJumlah <= 0) return;
+
+    setActionState({ type: 'loading', message: `Menyimpan "${stockNama}" ke database stok...` });
+
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nama_bahan: stockNama.trim(),
+          kategori: stockKategori,
+          satuan: stockSatuan,
+          jumlah: Number(stockJumlah),
+          id_user: user?.id_user,
+          role: 'owner',
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal menambah stok bahan.' });
+        return;
+      }
+
+      setActionState({ type: 'success', message: resData.message || 'Stok berhasil ditambahkan!' });
+      setShowAddStockModal(false);
+      setStockNama('');
+      setStockJumlah(25);
+      await fetchLaporan();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat menambah stok bahan.' });
+    }
+  };
+
+  // Edit Stok Bahan
+  const handleEditStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStockToEdit || !editStockNama.trim() || editStockJumlah < 0) return;
+
+    setActionState({ type: 'loading', message: `Memperbarui data "${editStockNama}"...` });
+
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id_stok: selectedStockToEdit.id_stok,
+          nama_bahan: editStockNama.trim(),
+          kategori: editStockKategori,
+          satuan: editStockSatuan,
+          jumlah: Number(editStockJumlah),
+          role: 'owner',
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal mengedit stok.' });
+        return;
+      }
+
+      setActionState({ type: 'success', message: resData.message || 'Stok berhasil diperbarui!' });
+      setShowEditStockModal(false);
+      setSelectedStockToEdit(null);
+      await fetchLaporan();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat mengedit stok.' });
+    }
+  };
+
+  // Restock Pasokan Bahan
+  const handleRestockStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStockToRestock || stockRestockQty <= 0) return;
+
+    setActionState({
+      type: 'loading',
+      message: `Menambahkan pasokan +${stockRestockQty} ${selectedStockToRestock.satuan}...`,
+    });
+
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nama_bahan: selectedStockToRestock.nama_bahan,
+          kategori: selectedStockToRestock.kategori,
+          satuan: selectedStockToRestock.satuan,
+          jumlah: Number(stockRestockQty),
+          id_user: user?.id_user,
+          role: 'owner',
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal menambahkan restock bahan.' });
+        return;
+      }
+
+      setActionState({ type: 'success', message: resData.message || 'Restock bahan berhasil!' });
+      setShowRestockStockModal(false);
+      setSelectedStockToRestock(null);
+      await fetchLaporan();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat restock bahan.' });
+    }
+  };
+
+  // Hapus Bahan
+  const handleDeleteStock = async (stok: StokBahanItem) => {
+    const isConfirmed = window.confirm(
+      `Hapus stok "${stok.nama_bahan}" (${stok.kategori}) dari database?\n\nPeringatan: Data ini tidak dapat dikembalikan.`
+    );
+    if (!isConfirmed) return;
+
+    setActionState({ type: 'loading', message: `Menghapus "${stok.nama_bahan}"...` });
+
+    try {
+      const res = await fetch(`/api/stok?id_stok=${stok.id_stok}&role=owner`, {
+        method: 'DELETE',
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        setActionState({ type: 'error', message: resData.message || 'Gagal menghapus stok.' });
+        return;
+      }
+
+      setActionState({
+        type: 'success',
+        message: resData.message || `Stok "${stok.nama_bahan}" berhasil dihapus.`,
+      });
+
+      await fetchLaporan();
+    } catch {
+      setActionState({ type: 'error', message: 'Kendala jaringan saat menghapus stok.' });
+    }
+  };
+
+  // Modal Openers untuk Stok Bahan
+  const handleOpenAddStock = () => {
+    setStockNama('');
+    setStockKategori('Plastik');
+    setStockSatuan('Pack');
+    setStockJumlah(25);
+    setShowAddStockModal(true);
+    setActionState({ type: 'idle', message: null });
+  };
+
+  const handleOpenEditStock = (stok: StokBahanItem) => {
+    setSelectedStockToEdit(stok);
+    setEditStockNama(stok.nama_bahan);
+    setEditStockKategori(stok.kategori);
+    setEditStockSatuan(stok.satuan);
+    setEditStockJumlah(stok.jumlah);
+    setShowEditStockModal(true);
+    setActionState({ type: 'idle', message: null });
+  };
+
+  const handleOpenRestockStock = (stok: StokBahanItem) => {
+    setSelectedStockToRestock(stok);
+    setStockRestockQty(stok.kategori === 'Plastik' ? 20 : 10);
+    setShowRestockStockModal(true);
+    setActionState({ type: 'idle', message: null });
+  };
+
   const cancelledOrdersCount = (laporan?.orders || []).filter(
     (o) => o.status_pesanan === 'dibatalkan'
   ).length;
@@ -643,6 +843,10 @@ export default function OwnerDashboardPage() {
               onOpenRestockModal={handleOpenRestock}
               onOpenEditModal={handleOpenEditProduct}
               onDeleteProduct={handleDeleteProduct}
+              onOpenAddStockModal={handleOpenAddStock}
+              onOpenEditStockModal={handleOpenEditStock}
+              onOpenRestockStockModal={handleOpenRestockStock}
+              onDeleteStock={handleDeleteStock}
             />
           ) : viewSection === 'pembatalan' ? (
             <OwnerCancellationDashboard orders={laporan?.orders || []} />
@@ -725,6 +929,54 @@ export default function OwnerDashboardPage() {
         <OwnerQrisProofModal
           order={selectedQrisProof}
           onClose={() => setSelectedQrisProof(null)}
+        />
+
+        {/* MODAL TAMBAH STOK BAHAN / PLASTIK (KHUSUS OWNER) */}
+        <OwnerAddStockModal
+          isOpen={showAddStockModal}
+          namaBahan={stockNama}
+          setNamaBahan={setStockNama}
+          kategori={stockKategori}
+          setKategori={setStockKategori}
+          satuan={stockSatuan}
+          setSatuan={setStockSatuan}
+          jumlah={stockJumlah}
+          setJumlah={setStockJumlah}
+          isLoading={actionState.type === 'loading'}
+          onClose={() => setShowAddStockModal(false)}
+          onSubmit={handleAddStockSubmit}
+        />
+
+        {/* MODAL EDIT STOK BAHAN (KHUSUS OWNER) */}
+        <OwnerEditStockModal
+          stockItem={selectedStockToEdit}
+          editNama={editStockNama}
+          setEditNama={setEditStockNama}
+          editKategori={editStockKategori}
+          setEditKategori={setEditStockKategori}
+          editSatuan={editStockSatuan}
+          setEditSatuan={setEditStockSatuan}
+          editJumlah={editStockJumlah}
+          setEditJumlah={setEditStockJumlah}
+          isLoading={actionState.type === 'loading'}
+          onClose={() => {
+            setShowEditStockModal(false);
+            setSelectedStockToEdit(null);
+          }}
+          onSubmit={handleEditStockSubmit}
+        />
+
+        {/* MODAL RESTOCK BAHAN (KHUSUS OWNER) */}
+        <OwnerRestockMaterialModal
+          stockItem={selectedStockToRestock}
+          additionalQty={stockRestockQty}
+          setAdditionalQty={setStockRestockQty}
+          isLoading={actionState.type === 'loading'}
+          onClose={() => {
+            setShowRestockStockModal(false);
+            setSelectedStockToRestock(null);
+          }}
+          onSubmit={handleRestockStockSubmit}
         />
       </div>
 

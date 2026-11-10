@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     const { action = 'add', nama_bahan, kategori, satuan, jumlah, id_user, role } = body;
 
     // Hak Akses Ketat: Hanya Owner yang boleh mengelola (CRUD) stok!
-    if (role && role !== 'owner') {
+    if (!role || role !== 'owner') {
       return NextResponse.json({
         message: 'Akses ditolak! Hanya Owner yang memiliki izin menambah atau memodifikasi stok bahan.',
       }, { status: 403 });
@@ -211,7 +211,7 @@ export async function PATCH(req: NextRequest) {
     const { id_stok, nama_bahan, kategori, satuan, jumlah, role } = body;
 
     // Hak Akses Ketat: Hanya Owner yang boleh mengedit stok
-    if (role && role !== 'owner') {
+    if (!role || role !== 'owner') {
       return NextResponse.json({
         message: 'Akses ditolak! Hanya Owner yang memiliki izin mengedit stok.',
       }, { status: 403 });
@@ -266,11 +266,19 @@ export async function DELETE(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const id_stok = searchParams.get('id_stok');
-    const role = searchParams.get('role');
+    let id_stok = searchParams.get('id_stok');
+    let role = searchParams.get('role');
+
+    if (!id_stok || !role) {
+      try {
+        const body = await req.json();
+        if (body.id_stok) id_stok = String(body.id_stok);
+        if (body.role) role = String(body.role);
+      } catch {}
+    }
 
     // Hak Akses Ketat: Hanya Owner yang boleh menghapus item stok
-    if (role && role !== 'owner') {
+    if (!role || role !== 'owner') {
       return NextResponse.json({
         message: 'Akses ditolak! Hanya Owner yang memiliki izin menghapus stok.',
       }, { status: 403 });

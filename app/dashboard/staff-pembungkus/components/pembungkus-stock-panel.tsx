@@ -1,18 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Layers, PlusCircle } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import { StokItem } from '../types';
 
 interface PembungkusStockPanelProps {
   stockList: StokItem[];
-  onOpenRestockModal: () => void;
 }
 
-export default function PembungkusStockPanel({
-  stockList,
-  onOpenRestockModal,
-}: PembungkusStockPanelProps) {
+export default function PembungkusStockPanel({ stockList }: PembungkusStockPanelProps) {
   const plasticStocks = stockList.filter((s) => s.kategori === 'Plastik');
 
   return (
@@ -24,23 +20,16 @@ export default function PembungkusStockPanel({
             Stok Plastik Kemasan di Gudang Pembungkusan
           </h2>
           <p className="text-xs text-gray-500">
-            Pencatatan persediaan berbagai ukuran plastik pembungkus kerupuk
+            Output pemantauan persediaan kemasan plastik pembungkus kerupuk. Pengelolaan pasokan stok plastik dikelola langsung oleh <strong>Owner</strong>.
           </p>
         </div>
-        <button
-          onClick={onOpenRestockModal}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs shadow-sm transition w-fit"
-        >
-          <PlusCircle className="w-4 h-4" />
-          + Input Stok Plastik Masuk
-        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {plasticStocks.map((stok) => (
           <div
             key={stok.id_stok}
-            className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between"
+            className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between hover:border-brand-maroon/30 transition"
           >
             <div>
               <span className="font-semibold text-gray-900 text-xs block leading-tight">{stok.nama_bahan}</span>
