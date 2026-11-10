@@ -15,10 +15,15 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
-// Server-side admin Supabase client with bypass RLS if service key is provided
+// Server-side admin Supabase client with bypass RLS (Singleton instance to reuse HTTP/TLS Keep-Alive)
+let cachedServerClient: any = null;
+
 export const getSupabaseServerClient = () => {
   if (!isSupabaseConfigured) return null;
-  return createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
-    auth: { persistSession: false },
-  });
+  if (!cachedServerClient) {
+    cachedServerClient = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
+      auth: { persistSession: false },
+    });
+  }
+  return cachedServerClient;
 };

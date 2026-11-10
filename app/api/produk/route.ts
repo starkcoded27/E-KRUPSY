@@ -2,32 +2,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase';
 import { validateForm } from '@/lib/validation';
 import { productToBahanName, KG_PER_BAL } from '@/lib/stock-sync';
+import { getCached, setCached, invalidateCache } from '@/lib/api-cache';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const cached = getCached('api:produk', 4000);
+  if (cached) {
+    return NextResponse.json({ success: true, data: cached });
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ message: 'Database Supabase tidak terhubung.' }, { status: 500 });
   }
 
-  const { data, error } = await supabase
-    .from('produk')
-    .select('*')
-    .order('id_produk', { ascending: true });
+  // Eksekusi query produk dan query pesanan secara PARALEL
+  const [produkRes, pesananRes] = await Promise.all([
+    supabase
+      .from('produk')
+      .select('*')
+      .order('id_produk', { ascending: true }),
+    supabase
+      .from('pesanan')
+      .select('id_produk, jumlah, status_pesanan'),
+  ]);
 
-  if (error) {
-    return NextResponse.json({ message: 'Gagal mengambil data produk: ' + error.message }, { status: 500 });
+  if (produkRes.error) {
+    return NextResponse.json({ message: 'Gagal mengambil data produk: ' + produkRes.error.message }, { status: 500 });
   }
 
-  // Hitung jumlah terjual secara live otomatis dari tabel pesanan (hanya pesanan aktif/selesai, bukan dibatalkan)
-  const { data: pesananList, error: orderErr } = await supabase
-    .from('pesanan')
-    .select('id_produk, jumlah, status_pesanan');
-
   const soldMap: Record<number, number> = {};
-  if (!orderErr && Array.isArray(pesananList)) {
-    for (const ord of pesananList) {
+  if (!pesananRes.error && Array.isArray(pesananRes.data)) {
+    for (const ord of pesananRes.data) {
       if (ord.id_produk && ord.status_pesanan !== 'dibatalkan') {
         const qty = Number(ord.jumlah) || 0;
         soldMap[ord.id_produk] = (soldMap[ord.id_produk] || 0) + qty;
@@ -36,10 +43,12 @@ export async function GET() {
   }
 
   // Gabungkan jumlah terjual ke masing-masing produk
-  const enrichedProducts = (data || []).map((prod: any) => ({
+  const enrichedProducts = (produkRes.data || []).map((prod: any) => ({
     ...prod,
     terjual: (soldMap[prod.id_produk] || 0) + (Number(prod.terjual) || 0),
   }));
+
+  setCached('api:produk', enrichedProducts);
 
   return NextResponse.json({ success: true, data: enrichedProducts });
 }
@@ -81,7 +90,7 @@ export async function POST(req: NextRequest) {
     }
 
     const isDuplicate = existingProducts?.some(
-      (p) => p.nama_produk && p.nama_produk.trim().toLowerCase() === cleanNama.toLowerCase()
+      (p: any) => p.nama_produk && p.nama_produk.trim().toLowerCase() === cleanNama.toLowerCase()
     );
 
     if (isDuplicate) {
@@ -145,6 +154,8 @@ export async function POST(req: NextRequest) {
         });
     }
 
+    invalidateCache();
+
     return NextResponse.json({
       success: true,
       message: `Produk kerupuk baru berhasil ditambahkan (${stok} Bal setara ${kgEquivalent} Kg mentah di dapur).`,
@@ -200,6 +211,8 @@ export async function PATCH(req: NextRequest) {
       if (updateErr) {
         return NextResponse.json({ message: 'Gagal mengubah produk: ' + updateErr.message }, { status: 500 });
       }
+
+      invalidateCache();
 
       return NextResponse.json({
         success: true,
@@ -285,6 +298,8 @@ export async function PATCH(req: NextRequest) {
         });
     }
 
+    invalidateCache();
+
     return NextResponse.json({
       success: true,
       message: `Berhasil restock ${currentProd.nama_produk}: +${addBal} Bal (Otomatis menambah +${kgEquivalent} Kg bahan mentah di dapur). Total stok sekarang: ${newStokBal} Bal.`,
@@ -294,7 +309,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ message: 'Terjadi kesalahan sistem: ' + err.message }, { status: 500 });
   }
 }
-
 
 export async function DELETE(req: NextRequest) {
   const supabase = getSupabaseServerClient();
@@ -317,6 +331,8 @@ export async function DELETE(req: NextRequest) {
     if (error) {
       return NextResponse.json({ message: 'Gagal menghapus produk: ' + error.message }, { status: 500 });
     }
+
+    invalidateCache();
 
     return NextResponse.json({ success: true, message: 'Produk berhasil dihapus dari katalog pabrik.' });
   } catch (err: any) {

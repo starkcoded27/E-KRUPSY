@@ -1,73 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import RoleGuard from '@/components/auth/role-guard';
 import { useAuth } from '@/context/auth-context';
 import StateAlert, { StateType } from '@/components/ui/state-alert';
-import { 
-  Flame, 
-  Package, 
-  CheckCircle2, 
-  Clock, 
-  Layers, 
-  RefreshCw,
-  AlertTriangle,
-  ShieldCheck,
-  Eye
-} from 'lucide-react';
-
-interface ProduksiItem {
-  id_produksi: number;
-  id_pesanan: number;
-  id_produk: number;
-  tanggal_produksi: string;
-  status_produksi: string;
-  pesanan?: {
-    id_pesanan: number;
-    jumlah: number;
-    varian_rasa: string;
-    ukuran_plastik: string;
-    status_pesanan: string;
-    pelanggan?: {
-      nama_lengkap: string;
-      no_telp: string;
-    };
-  };
-  produk?: {
-    nama_produk: string;
-    satuan: string;
-  };
-  verifikasi?: {
-    id_verifikasi: number;
-    status: string;
-    keterangan: string;
-  }[];
-}
-
-interface StokItem {
-  id_stok: number;
-  nama_bahan: string;
-  kategori: string;
-  satuan: string;
-  jumlah: number;
-  tanggal_update: string;
-}
+import { Flame, RefreshCw } from 'lucide-react';
+import { ProduksiItem, StokItem } from './types';
+import PenggorengTaskList from './components/penggoreng-task-list';
+import PenggorengStockPanel from './components/penggoreng-stock-panel';
 
 export default function StaffPenggorengDashboardPage() {
   const { user } = useAuth();
 
-  // State data
   const [productionList, setProductionList] = useState<ProduksiItem[]>([]);
   const [stockList, setStockList] = useState<StokItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 3 Kondisi Sistem (State)
   const [actionState, setActionState] = useState<{ type: StateType; message: string | null }>({
     type: 'idle',
     message: null,
   });
+  const isFetchingRef = useRef(false);
 
   const fetchData = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsLoading(true);
     try {
       const [resProd, resStock] = await Promise.all([
@@ -75,14 +32,17 @@ export default function StaffPenggorengDashboardPage() {
         fetch('/api/stok'),
       ]);
 
-      const dataProd = await resProd.json();
-      const dataStock = await resStock.json();
+      const [dataProd, dataStock] = await Promise.all([
+        resProd.json(),
+        resStock.json(),
+      ]);
 
       if (resProd.ok) setProductionList(dataProd.data || []);
       if (resStock.ok) setStockList(dataStock.data || []);
     } catch (err: any) {
       if (!silent) console.error('Error fetch staff penggoreng:', err);
     } finally {
+      isFetchingRef.current = false;
       if (!silent) setIsLoading(false);
     }
   };
@@ -90,15 +50,25 @@ export default function StaffPenggorengDashboardPage() {
   useEffect(() => {
     fetchData();
 
-    // Auto-update antrean dan stok live real-time tanpa reload / refresh manual
+    // Auto-update non-overlapping interval
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchData(true);
-    }, 2500);
+    }, 8000);
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
-  // Handler Update Status Produksi
   const handleUpdateStatus = async (item: ProduksiItem, nextStatus: string, label: string) => {
     setActionState({ type: 'loading', message: `Sedang memperbarui status menjadi "${label}"...` });
 
@@ -131,8 +101,9 @@ export default function StaffPenggorengDashboardPage() {
     }
   };
 
-  // Filter antrean penggorengan yang belum selesai
-  const fryingTasks = productionList.filter((p) => p.status_produksi !== 'selesai');
+  const fryingTasks = productionList.filter(
+    (p) => p.status_produksi !== 'selesai' && p.pesanan && p.pesanan.status_pesanan !== 'dibatalkan'
+  );
 
   return (
     <RoleGuard allowedRoles={['staff_penggoreng']} pageTitle="Dashboard Staf Penggorengan">
@@ -147,9 +118,12 @@ export default function StaffPenggorengDashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
               Antrean Penggorengan
             </h1>
+<<<<<<< HEAD
             <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
               Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau ketersediaan stok kerupuk dan memproses antrean penggorengan pesanan pelanggan.
             </p>
+=======
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -171,6 +145,7 @@ export default function StaffPenggorengDashboardPage() {
           onClose={() => setActionState({ type: 'idle', message: null })}
         />
 
+<<<<<<< HEAD
         {/* ANTREAN PESANAN PENGGORENGAN (SDD UC-11) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
@@ -398,6 +373,13 @@ export default function StaffPenggorengDashboardPage() {
               })}
           </div>
         </div>
+=======
+        {/* Antrean Penggorengan Task List */}
+        <PenggorengTaskList tasks={fryingTasks} onUpdateStatus={handleUpdateStatus} />
+
+        {/* Stok Bahan Baku & Wajan Panel */}
+        <PenggorengStockPanel stockList={stockList} />
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
       </div>
     </RoleGuard>
   );

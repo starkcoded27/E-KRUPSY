@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import RoleGuard from '@/components/auth/role-guard';
 import { useAuth } from '@/context/auth-context';
 import StateAlert, { StateType } from '@/components/ui/state-alert';
 import { validateForm } from '@/lib/validation';
+<<<<<<< HEAD
 import { 
   PackageCheck, 
   CheckCircle2, 
@@ -53,6 +54,14 @@ interface StokItem {
   jumlah: number;
   tanggal_update: string;
 }
+=======
+import { PackageCheck, RefreshCw, PlusCircle } from 'lucide-react';
+import { ProduksiItem, StokItem } from './types';
+import PembungkusTaskList from './components/pembungkus-task-list';
+import PembungkusStockPanel from './components/pembungkus-stock-panel';
+import PembungkusQcModal from './components/pembungkus-qc-modal';
+import PembungkusRestockModal from './components/pembungkus-restock-modal';
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
 
 export default function StaffPembungkusDashboardPage() {
   const { user } = useAuth();
@@ -73,7 +82,18 @@ export default function StaffPembungkusDashboardPage() {
   const [qcNotes, setQcNotes] = useState<string>('Kerenyahan sempurna, rasa merata, dan timbangan sesuai.');
   const [verifErrors, setVerifErrors] = useState<Record<string, string>>({});
 
+<<<<<<< HEAD
+=======
+  // State Modal Input Stok Plastik (UC-09)
+  const [showPlasticModal, setShowPlasticModal] = useState(false);
+  const [namaPlastik, setNamaPlastik] = useState('Plastik Ukuran 1/2 kg');
+  const [jumlahPlastik, setJumlahPlastik] = useState<number>(20);
+  const isFetchingRef = useRef(false);
+
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
   const fetchData = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsLoading(true);
     try {
       const [resProd, resStock] = await Promise.all([
@@ -81,14 +101,17 @@ export default function StaffPembungkusDashboardPage() {
         fetch('/api/stok'),
       ]);
 
-      const dataProd = await resProd.json();
-      const dataStock = await resStock.json();
+      const [dataProd, dataStock] = await Promise.all([
+        resProd.json(),
+        resStock.json(),
+      ]);
 
       if (resProd.ok) setProductionList(dataProd.data || []);
       if (resStock.ok) setStockList(dataStock.data || []);
     } catch (err: any) {
       if (!silent) console.error('Fetch error pembungkus:', err);
     } finally {
+      isFetchingRef.current = false;
       if (!silent) setIsLoading(false);
     }
   };
@@ -96,20 +119,30 @@ export default function StaffPembungkusDashboardPage() {
   useEffect(() => {
     fetchData();
 
-    // Auto-update live real-time antrean kemas tanpa perlu refresh manual
+    // Auto-update live real-time antrean kemas tanpa request stacking
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchData(true);
-    }, 2500);
+    }, 8000);
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
-  // Submit QC Verifikasi (UC-10) dengan 4 Validasi Input
+  // Submit QC Verifikasi (UC-10)
   const handleVerifySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!verifTarget || !user?.id_user) return;
 
-    // 4 Jenis Validasi Input
     const validation = validateForm([
       { field: 'id_produksi', label: 'ID Produksi', value: verifTarget.id_produksi, required: true, dataType: 'integer' },
       { field: 'status', label: 'Status Kelayakan', value: qcStatus, required: true, domain: { allowedValues: ['Lolos Verifikasi', 'Cacat / Tidak Sesuai'] } },
@@ -189,11 +222,59 @@ export default function StaffPembungkusDashboardPage() {
     }
   };
 
+<<<<<<< HEAD
   // Antrean untuk staf pembungkus:
   // 1. Siap Diverifikasi (belum diverifikasi mutu)
   // 2. Sedang Dikemas (telah Lolos Verifikasi mutu dan belum selesai)
+=======
+  // Handler Input Stok Plastik (UC-09)
+  const handleAddPlasticSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const validation = validateForm([
+      { field: 'nama_bahan', label: 'Nama Kemasan Plastik', value: namaPlastik, required: true, dataType: 'string' },
+      { field: 'jumlah', label: 'Jumlah Masuk (Pack)', value: jumlahPlastik, required: true, dataType: 'integer', domain: { min: 1, max: 1000 } },
+    ]);
+
+    if (!validation.isValid) {
+      setActionState({ type: 'error', message: validation.firstError });
+      return;
+    }
+
+    setActionState({ type: 'loading', message: 'Menyimpan stok plastik ke Supabase...' });
+
+    try {
+      const res = await fetch('/api/stok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nama_bahan: namaPlastik,
+          kategori: 'Plastik',
+          satuan: 'Pack',
+          jumlah: Number(jumlahPlastik),
+          id_user: user?.id_user,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setActionState({ type: 'error', message: data.message || 'Gagal menyimpan stok plastik.' });
+        return;
+      }
+
+      setActionState({ type: 'success', message: data.message });
+      setShowPlasticModal(false);
+      await fetchData();
+    } catch {
+      setActionState({ type: 'error', message: 'Gagal menyimpan stok plastik.' });
+    }
+  };
+
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
   const packingTasks = productionList.filter((p) => {
     if (p.status_produksi === 'selesai') return false;
+    if (p.pesanan && p.pesanan.status_pesanan === 'dibatalkan') return false;
     const hasPassedQC = Boolean(p.verifikasi && p.verifikasi.some((v) => v.status === 'Lolos Verifikasi'));
     return p.status_produksi === 'siap_diverifikasi' || p.status_produksi === 'sedang_dikemas' || hasPassedQC;
   });
@@ -211,9 +292,12 @@ export default function StaffPembungkusDashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
               Verifikasi Mutu & Pengemasan Plastik
             </h1>
+<<<<<<< HEAD
             <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
               Halo, <strong>{user?.nama}</strong>. Periksa kerenyahan fisik kerupuk dari penggorengan, verifikasi jumlah pesanan, dan selesaikan packing plastik.
             </p>
+=======
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
           </div>
 
           <div className="mt-4 flex gap-2">
@@ -235,6 +319,7 @@ export default function StaffPembungkusDashboardPage() {
           onClose={() => setActionState({ type: 'idle', message: null })}
         />
 
+<<<<<<< HEAD
         {/* ANTREAN VERIFIKASI & PENGEMASAN (SDD UC-10 & UC-11) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
@@ -248,39 +333,45 @@ export default function StaffPembungkusDashboardPage() {
               </p>
             </div>
           </div>
+=======
+        {/* Antrean Verifikasi & Pengemasan */}
+        <PembungkusTaskList
+          tasks={packingTasks}
+          stockList={stockList}
+          onOpenQcModal={(item) => {
+            setVerifTarget(item);
+            setQcStatus('Lolos Verifikasi');
+            setQcNotes('Kerenyahan sempurna, rasa merata, dan timbangan sesuai.');
+            setVerifErrors({});
+            setActionState({ type: 'idle', message: null });
+          }}
+          onFinishPacking={handleFinishPacking}
+        />
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
 
-          {packingTasks.length === 0 ? (
-            <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100">
-              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-              <p className="text-xs font-bold text-gray-700">Tidak ada kerupuk yang menunggu verifikasi atau kemas saat ini.</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">Setelah bagian penggorengan selesai menggoreng, pesanan akan masuk ke daftar ini.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {packingTasks.map((item) => {
-                const hasPassedQC = Boolean(item.verifikasi && item.verifikasi.some((v) => v.status === 'Lolos Verifikasi'));
-                const isPacking = (item.status_produksi === 'sedang_dikemas' || hasPassedQC) && item.status_produksi !== 'selesai';
-                const isReadyForQC = !isPacking && item.status_produksi === 'siap_diverifikasi';
+        {/* Stok Plastik Pembungkus */}
+        <PembungkusStockPanel
+          stockList={stockList}
+          onOpenRestockModal={() => {
+            setShowPlasticModal(true);
+            setActionState({ type: 'idle', message: null });
+          }}
+        />
 
-                return (
-                  <div
-                    key={item.id_produksi}
-                    className="p-4 rounded-2xl bg-gray-50 border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-blue-200 transition"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-xs font-mono font-bold bg-blue-100 text-blue-900 px-2 py-0.5 rounded-md">
-                          Pesanan #{item.id_pesanan}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                          isReadyForQC
-                            ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse'
-                            : 'bg-blue-100 text-blue-800 border border-blue-300'
-                        }`}>
-                          {isReadyForQC ? 'Butuh Verifikasi Mutu' : '3. Sedang Dibungkus / Dikemas'}
-                        </span>
-                      </div>
+        {/* Modal QC */}
+        <PembungkusQcModal
+          verifTarget={verifTarget}
+          qcStatus={qcStatus}
+          setQcStatus={setQcStatus}
+          qcNotes={qcNotes}
+          setQcNotes={setQcNotes}
+          verifErrors={verifErrors}
+          isLoading={actionState.type === 'loading'}
+          onClose={() => setVerifTarget(null)}
+          onSubmit={handleVerifySubmit}
+        />
 
+<<<<<<< HEAD
                       <h3 className="font-bold text-gray-900 text-base sm:text-lg">{item.produk?.nama_produk}</h3>
                       <div className="text-gray-600 mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs sm:text-sm">
                         <span>Target: <strong className="text-gray-800">{item.pesanan?.jumlah} {item.produk?.satuan}</strong></span>
@@ -507,6 +598,19 @@ export default function StaffPembungkusDashboardPage() {
             </div>
           </div>
         )}
+=======
+        {/* Modal Restock Plastik */}
+        <PembungkusRestockModal
+          isOpen={showPlasticModal}
+          namaPlastik={namaPlastik}
+          setNamaPlastik={setNamaPlastik}
+          jumlahPlastik={jumlahPlastik}
+          setJumlahPlastik={setJumlahPlastik}
+          isLoading={actionState.type === 'loading'}
+          onClose={() => setShowPlasticModal(false)}
+          onSubmit={handleAddPlasticSubmit}
+        />
+>>>>>>> 19949fe33b7affe50cde79294a74ccf6e4dccb8c
       </div>
     </RoleGuard>
   );
