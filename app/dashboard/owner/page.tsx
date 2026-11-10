@@ -620,11 +620,11 @@ export default function OwnerDashboardPage() {
   };
 
   // Modal Openers untuk Stok Bahan
-  const handleOpenAddStock = () => {
+  const handleOpenAddStock = (defaultKat: 'Plastik' | 'Bumbu' = 'Plastik') => {
     setStockNama('');
-    setStockKategori('Plastik');
-    setStockSatuan('Pack');
-    setStockJumlah(25);
+    setStockKategori(defaultKat);
+    setStockSatuan(defaultKat === 'Plastik' ? 'Pack' : 'Kg');
+    setStockJumlah(defaultKat === 'Plastik' ? 25 : defaultKat === 'Bumbu' ? 20 : 100);
     setShowAddStockModal(true);
     setActionState({ type: 'idle', message: null });
   };
@@ -760,7 +760,7 @@ export default function OwnerDashboardPage() {
                 ) : viewSection === 'katalog' ? (
                   <>
                     <Package className="w-5 h-5 text-brand-maroon" />
-                    Katalog Master Produk Kerupuk Pabrik
+                    Katalog Master Produk & Bahan Baku Pabrik
                   </>
                 ) : (
                   <>
@@ -775,7 +775,7 @@ export default function OwnerDashboardPage() {
                   : viewSection === 'pelanggan'
                   ? 'Daftar seluruh akun pelanggan yang terdaftar di basis data Pabrik Kerupuk Diansyah'
                   : viewSection === 'katalog'
-                  ? 'Daftar seluruh katalog varian kerupuk. Nama produk bersifat unik dan tidak dapat diduplikasi'
+                  ? 'Kelola katalog produk kerupuk jual, kemasan plastik, bumbu tabur rasa, dan stok mentah dapur'
                   : 'Monitoring seluruh pesanan yang dibatalkan oleh pelanggan dan verifikasi pengembalian alokasi stok mentah'}
               </p>
             </div>
@@ -816,7 +816,7 @@ export default function OwnerDashboardPage() {
                 }`}
               >
                 <Package className="w-3.5 h-3.5" />
-                <span>Katalog Produk ({laporan?.produkList?.length || 0})</span>
+                <span>Katalog & Bahan ({(laporan?.produkList?.length || 0) + (laporan?.stockList?.filter((s: any) => s.kategori === 'Plastik' || s.kategori === 'Bumbu')?.length || 0)})</span>
               </button>
               <button
                 type="button"
@@ -839,6 +839,7 @@ export default function OwnerDashboardPage() {
             <OwnerCatalogTable
               produkList={laporan?.produkList || []}
               stockList={laporan?.stockList || []}
+              orders={laporan?.orders || []}
               onOpenAddModal={handleOpenAddProduct}
               onOpenRestockModal={handleOpenRestock}
               onOpenEditModal={handleOpenEditProduct}

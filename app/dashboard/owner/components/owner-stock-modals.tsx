@@ -69,9 +69,8 @@ export function OwnerAddStockModal({
               }}
               className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
             >
-              <option value="Plastik">Plastik Kemasan (Divisi Pembungkus)</option>
-              <option value="Kerupuk Mentah">Kerupuk Mentah (Divisi Penggorengan)</option>
-              <option value="Bumbu">Bumbu Rasa (Divisi Penggorengan)</option>
+              <option value="Plastik">Plastik Kemasan</option>
+              <option value="Bumbu">Bumbu Tabur Rasa</option>
             </select>
           </div>
 
@@ -216,9 +215,8 @@ export function OwnerEditStockModal({
               onChange={(e) => setEditKategori(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
             >
-              <option value="Plastik">Plastik Kemasan (Divisi Pembungkus)</option>
-              <option value="Kerupuk Mentah">Kerupuk Mentah (Divisi Penggorengan)</option>
-              <option value="Bumbu">Bumbu Rasa (Divisi Penggorengan)</option>
+              <option value="Plastik">Plastik Kemasan</option>
+              <option value="Bumbu">Bumbu Tabur Rasa</option>
             </select>
           </div>
 
