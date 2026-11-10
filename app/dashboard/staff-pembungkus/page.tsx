@@ -9,12 +9,12 @@ import {
   PackageCheck, 
   CheckCircle2, 
   Layers, 
-  PlusCircle, 
   ClipboardCheck, 
   X, 
   RefreshCw,
-  Package,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  ShieldCheck
 } from 'lucide-react';
 
 interface ProduksiItem {
@@ -72,11 +72,6 @@ export default function StaffPembungkusDashboardPage() {
   const [qcStatus, setQcStatus] = useState<string>('Lolos Verifikasi');
   const [qcNotes, setQcNotes] = useState<string>('Kerenyahan sempurna, rasa merata, dan timbangan sesuai.');
   const [verifErrors, setVerifErrors] = useState<Record<string, string>>({});
-
-  // State Modal Input Stok Plastik (UC-09)
-  const [showPlasticModal, setShowPlasticModal] = useState(false);
-  const [namaPlastik, setNamaPlastik] = useState('Plastik Ukuran 1/2 kg');
-  const [jumlahPlastik, setJumlahPlastik] = useState<number>(20);
 
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -194,50 +189,6 @@ export default function StaffPembungkusDashboardPage() {
     }
   };
 
-  // Handler Input Stok Plastik (UC-09) dengan 4 Validasi
-  const handleAddPlasticSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const validation = validateForm([
-      { field: 'nama_bahan', label: 'Nama Kemasan Plastik', value: namaPlastik, required: true, dataType: 'string' },
-      { field: 'jumlah', label: 'Jumlah Masuk (Pack)', value: jumlahPlastik, required: true, dataType: 'integer', domain: { min: 1, max: 1000 } },
-    ]);
-
-    if (!validation.isValid) {
-      setActionState({ type: 'error', message: validation.firstError });
-      return;
-    }
-
-    setActionState({ type: 'loading', message: 'Menyimpan stok plastik ke Supabase...' });
-
-    try {
-      const res = await fetch('/api/stok', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nama_bahan: namaPlastik,
-          kategori: 'Plastik',
-          satuan: 'Pack',
-          jumlah: Number(jumlahPlastik),
-          id_user: user?.id_user,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setActionState({ type: 'error', message: data.message || 'Gagal menyimpan stok plastik.' });
-        return;
-      }
-
-      setActionState({ type: 'success', message: data.message });
-      setShowPlasticModal(false);
-      await fetchData();
-    } catch {
-      setActionState({ type: 'error', message: 'Gagal menyimpan stok plastik.' });
-    }
-  };
-
   // Antrean untuk staf pembungkus:
   // 1. Siap Diverifikasi (belum diverifikasi mutu)
   // 2. Sedang Dikemas (telah Lolos Verifikasi mutu dan belum selesai)
@@ -250,17 +201,17 @@ export default function StaffPembungkusDashboardPage() {
   return (
     <RoleGuard allowedRoles={['staff_pembungkus']} pageTitle="Dashboard Staf Pembungkus">
       <div className="space-y-6">
-        {/* Banner Staf Pembungkus */}
-        <div className="bg-gradient-to-r from-blue-800 via-brand-maroon to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        {/* Banner Staf Pembungkus (Warna Selaras dengan Staf Penggoreng) */}
+        <div className="bg-gradient-to-r from-orange-700 via-brand-maroon to-amber-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-400/20 text-blue-200 border border-blue-300/30 mb-3">
-              <PackageCheck className="w-3.5 h-3.5 text-blue-300" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-400/20 text-orange-200 border border-orange-300/30 mb-3">
+              <PackageCheck className="w-3.5 h-3.5 text-orange-300" />
               Divisi QC & Pembungkusan Produk
             </span>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
               Verifikasi Mutu & Pengemasan Plastik
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-blue-100/90 leading-relaxed">
+            <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
               Halo, <strong>{user?.nama}</strong>. Periksa kerenyahan fisik kerupuk dari penggorengan, verifikasi jumlah pesanan, dan selesaikan packing plastik.
             </p>
           </div>
@@ -273,16 +224,6 @@ export default function StaffPembungkusDashboardPage() {
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               Segarkan Data
-            </button>
-            <button
-              onClick={() => {
-                setShowPlasticModal(true);
-                setActionState({ type: 'idle', message: null });
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-brand-darkmaroon font-bold bg-amber-300 hover:bg-amber-200 px-3.5 py-2 rounded-xl shadow-md transition"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              Input Stok Plastik Masuk
             </button>
           </div>
         </div>
@@ -299,7 +240,7 @@ export default function StaffPembungkusDashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <ClipboardCheck className="w-5 h-5 text-blue-600" />
+                <ClipboardCheck className="w-5 h-5 text-brand-maroon" />
                 Daftar Kerupuk Siap Diverifikasi & Dikemas ({packingTasks.length})
               </h2>
               <p className="text-xs text-gray-500">
@@ -395,7 +336,7 @@ export default function StaffPembungkusDashboardPage() {
                             setVerifErrors({});
                             setActionState({ type: 'idle', message: null });
                           }}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition"
                         >
                           <ClipboardCheck className="w-4 h-4" />
                           Verifikasi Kualitas (QC)
@@ -419,28 +360,28 @@ export default function StaffPembungkusDashboardPage() {
           )}
         </div>
 
-        {/* STOK PLASTIK PEMBUNGKUS (SDD UC-09 & Bab V Mockup Hal 90-91) */}
+        {/* STOK PLASTIK PEMBUNGKUS (Khusus Lihat / View Only) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
               <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                 <Layers className="w-5 h-5 text-brand-maroon" />
-                Stok Plastik Kemasan di Gudang Pembungkusan
+                Stok Plastik Kemasan di Gudang (View Only)
               </h2>
-              <p className="text-xs text-gray-500">
-                Pencatatan persediaan berbagai ukuran plastik pembungkus kerupuk
+              <p className="text-xs text-gray-500 mt-0.5">
+                Pemantauan persediaan berbagai ukuran plastik pembungkus. Penambahan pasokan dikelola langsung oleh <strong>Owner</strong>.
               </p>
             </div>
-            <button
-              onClick={() => {
-                setShowPlasticModal(true);
-                setActionState({ type: 'idle', message: null });
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs shadow-sm transition w-fit"
-            >
-              <PlusCircle className="w-4 h-4" />
-              + Input Stok Plastik Masuk
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                Mode: Khusus Pantau Stok (View Only)
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded-xl border border-gray-200">
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-maroon" />
+                Input Pasokan: Khusus Owner
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -453,7 +394,7 @@ export default function StaffPembungkusDashboardPage() {
                 >
                   <div>
                     <span className="font-semibold text-gray-900 text-xs block leading-tight">{stok.nama_bahan}</span>
-                    <span className="text-sm font-black text-blue-900 mt-1 block">
+                    <span className="text-sm font-black text-brand-maroon mt-1 block">
                       {stok.jumlah} {stok.satuan}
                     </span>
                     <span className="text-[10px] text-gray-400">Update: {stok.tanggal_update}</span>
@@ -560,78 +501,6 @@ export default function StaffPembungkusDashboardPage() {
                     className="py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
                   >
                     {actionState.type === 'loading' ? 'Menyimpan...' : 'Simpan Verifikasi'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL 2: INPUT STOK PLASTIK DENGAN 4 VALIDASI (SDD UC-09) */}
-        {showPlasticModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <Package className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 text-base">Input Stok Plastik Masuk</h3>
-                </div>
-                <button
-                  onClick={() => setShowPlasticModal(false)}
-                  className="p-1 rounded-xl text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddPlasticSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Jenis & Ukuran Plastik <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={namaPlastik}
-                    onChange={(e) => setNamaPlastik(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                  >
-                    <option value="Plastik Ukuran 1/2 kg">Plastik Ukuran 1/2 kg</option>
-                    <option value="Plastik Ukuran 1x25 kg">Plastik Ukuran 1x25 kg</option>
-                    <option value="Plastik Ukuran 30x45 kg">Plastik Ukuran 30x45 kg</option>
-                    <option value="Plastik Ukuran 12x22 kg">Plastik Ukuran 12x22 kg</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Jumlah Masuk (Pack) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="1000"
-                    value={jumlahPlastik}
-                    onChange={(e) => setJumlahPlastik(parseInt(e.target.value) || 0)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-maroon"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowPlasticModal(false)}
-                    className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={actionState.type === 'loading'}
-                    className="py-3 px-4 bg-brand-maroon hover:bg-brand-darkmaroon text-white text-xs font-bold rounded-2xl shadow-md transition disabled:opacity-50"
-                  >
-                    {actionState.type === 'loading' ? 'Menyimpan...' : 'Simpan Stok Plastik'}
                   </button>
                 </div>
               </form>

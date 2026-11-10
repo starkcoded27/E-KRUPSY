@@ -145,10 +145,10 @@ export default function StaffPenggorengDashboardPage() {
               Divisi Operasional Penggorengan Dadakan
             </span>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
-              Antrean Penggorengan & Stok Wajan
+              Antrean Penggorengan
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-orange-100/90 leading-relaxed">
-              Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau ketersediaan stok bahan baku wajan dan memproses antrean penggorengan pesanan pelanggan.
+              Halo, <strong>{user?.nama}</strong>. Kerupuk digoreng dadakan saat pesanan masuk. Anda dapat memantau ketersediaan stok kerupuk dan memproses antrean penggorengan pesanan pelanggan.
             </p>
           </div>
 
@@ -180,7 +180,7 @@ export default function StaffPenggorengDashboardPage() {
                 Antrean Pesanan Masuk Penggorengan ({fryingTasks.length})
               </h2>
               <p className="text-xs text-gray-500">
-                Pesanan yang masuk dari pelanggan dan harus diproses penggorengannya di wajan
+                Pesanan yang masuk dari pelanggan dan harus diproses penggorengannya
               </p>
             </div>
           </div>
@@ -223,7 +223,7 @@ export default function StaffPenggorengDashboardPage() {
                             : 'bg-indigo-100 text-indigo-800 border border-indigo-300'
                         }`}>
                           {isWaiting 
-                            ? 'Menunggu Wajan' 
+                            ? 'Menunggu Digoreng' 
                             : isFrying 
                             ? 'Sedang Digoreng' 
                             : hasVerification && isLolos
@@ -338,7 +338,7 @@ export default function StaffPenggorengDashboardPage() {
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Output pemantauan ketersediaan bahan baku wajan (<strong>1 Bal = 5 Kg mentah</strong>). Pasokan bahan baku dikelola langsung oleh <strong>Owner</strong>.
+                Output pemantauan ketersediaan stok kerupuk (<strong>1 Bal = 5 Kg mentah</strong>). Pasokan bahan baku dikelola langsung oleh <strong>Owner</strong>.
               </p>
             </div>
 
