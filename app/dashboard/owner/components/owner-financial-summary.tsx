@@ -11,23 +11,15 @@ import {
   Banknote,
   CreditCard,
   QrCode,
-  Printer,
-  RefreshCw,
 } from 'lucide-react';
 import { LaporanData } from '../types';
 
 interface OwnerFinancialSummaryProps {
   laporan: LaporanData | null;
-  isLoading: boolean;
-  onRefresh: () => void;
-  onOpenReportModal: () => void;
 }
 
 export default function OwnerFinancialSummary({
   laporan,
-  isLoading,
-  onRefresh,
-  onOpenReportModal,
 }: OwnerFinancialSummaryProps) {
   return (
     <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-6">
@@ -47,24 +39,6 @@ export default function OwnerFinancialSummary({
               </p>
             </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Segarkan Data
-          </button>
-          <button
-            onClick={onOpenReportModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-maroon hover:bg-brand-darkmaroon text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95"
-          >
-            <Printer className="w-4 h-4 text-amber-300" />
-            Cetak Laporan Keuangan (PDF / Print)
-          </button>
         </div>
       </div>
 

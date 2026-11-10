@@ -7,8 +7,6 @@ import StateAlert, { StateType } from '@/components/ui/state-alert';
 import { validateForm } from '@/lib/validation';
 import {
   BarChart3,
-  Printer,
-  PlusCircle,
   RefreshCw,
   CreditCard,
   Users,
@@ -654,60 +652,33 @@ export default function OwnerDashboardPage() {
     <RoleGuard allowedRoles={['owner']} pageTitle="Dashboard Owner">
       <div className={`space-y-6 ${selectedOrderToPrint || showFinancialReportModal ? 'print:hidden' : ''}`}>
         {/* Banner Eksekutif Owner */}
-        <div className="bg-gradient-to-r from-amber-800 via-brand-maroon to-brand-darkmaroon text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-          <div className="relative z-10 max-w-3xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-400/20 text-amber-200 border border-amber-300/30 mb-3">
-              <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
-              Pusat Kendali Eksekutif Pabrik Kerupuk Diansyah
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
-              Laporan Harian, Transaksi & Keuangan
-            </h1>
-            <p className="mt-2 text-xs sm:text-sm text-amber-100/80 leading-relaxed">
-              Selamat datang, <strong>{user?.nama}</strong>. Data berikut terhubung secara langsung (<em>real-time</em>) dengan database Supabase.
-            </p>
-          </div>
+        <div className="bg-gradient-to-r from-amber-800 via-brand-maroon to-brand-darkmaroon text-white rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-400/20 text-amber-200 border border-amber-300/30 mb-2.5">
+                <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
+                Panel Eksekutif Owner
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
+                Laporan & Pusat Kendali Pabrik
+              </h1>
+              <p className="mt-1.5 text-xs sm:text-sm text-amber-100/80 leading-relaxed">
+                Pantau performa penjualan, realisasi arus kas, dan kontrol operasional Pabrik Kerupuk Diansyah secara <em>real-time</em>.
+              </p>
+            </div>
 
-          <div className="mt-6 flex flex-wrap gap-2 text-xs print:hidden">
-            <button
-              onClick={() => {
-                setPrintPeriod('harian');
-                setShowFinancialReportModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-brand-darkmaroon font-bold transition shadow-sm"
-            >
-              <Printer className="w-4 h-4" />
-              Cetak Laporan (Harian / Bulanan / Tahunan)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setViewSection('katalog');
-                document.getElementById('section-manajemen-data')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold transition shadow-sm ${
-                viewSection === 'katalog'
-                  ? 'bg-amber-400 text-brand-darkmaroon'
-                  : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-              }`}
-            >
-              <Package className="w-4 h-4 text-amber-300" />
-              Kelola List Produk ({laporan?.produkList?.length || 0})
-            </button>
-            <button
-              onClick={handleOpenAddProduct}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition border border-white/20"
-            >
-              <PlusCircle className="w-4 h-4 text-amber-300" />
-              + Tambah Produk Baru
-            </button>
-            <button
-              onClick={() => fetchLaporan()}
-              disabled={isLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2 print:hidden self-start sm:self-center">
+              <button
+                type="button"
+                onClick={() => fetchLaporan()}
+                disabled={isLoading}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition border border-white/20 text-xs shadow-sm active:scale-95"
+                title="Segarkan data terbaru dari database"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>Segarkan Data</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -732,15 +703,7 @@ export default function OwnerDashboardPage() {
         />
 
         {/* Laporan Keuangan & Rekapitulasi Kas Pabrik */}
-        <OwnerFinancialSummary
-          laporan={laporan}
-          isLoading={isLoading}
-          onRefresh={() => fetchLaporan()}
-          onOpenReportModal={() => {
-            setPrintPeriod('bulanan');
-            setShowFinancialReportModal(true);
-          }}
-        />
+        <OwnerFinancialSummary laporan={laporan} />
 
         {/* TABEL MANAJEMEN DATA (TRANSAKSI, KATALOG PRODUK CRUD, PELANGGAN, PEMBATALAN) */}
         <div id="section-manajemen-data" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">

@@ -20,7 +20,7 @@ interface OwnerStatsCardsProps {
   setChartPeriod: (period: 'harian' | 'mingguan' | 'bulanan' | 'tahunan') => void;
   hoveredBarIndex: number | null;
   setHoveredBarIndex: (idx: number | null) => void;
-  onOpenFinancialReport: () => void;
+  onOpenFinancialReport?: () => void;
 }
 
 export default function OwnerStatsCards({
@@ -129,18 +129,18 @@ export default function OwnerStatsCards({
       </div>
 
       {/* DIAGRAM OMSET KEUANGAN */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-gray-100">
+      <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-100">
           <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-brand-maroon text-white flex items-center justify-center shadow-md shrink-0">
-              <BarChart3 className="w-6 h-6 text-amber-200" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-brand-maroon text-white flex items-center justify-center shadow-md shrink-0">
+              <BarChart3 className="w-5 h-5 text-amber-200" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
-                  Diagram Omset Keuangan Pabrik
+                <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                  Diagram Tren Omset & Arus Kas
                 </h2>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                   ● Real-Time
                 </span>
               </div>
@@ -150,31 +150,35 @@ export default function OwnerStatsCards({
             </div>
           </div>
 
-          {/* Toggle Periode */}
-          <div className="flex flex-wrap items-center gap-2 self-start lg:self-center">
-            <button
-              type="button"
-              onClick={onOpenFinancialReport}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-brand-darkmaroon font-bold text-xs shadow-sm transition active:scale-95"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>
-                Cetak Laporan{' '}
-                {chartPeriod === 'bulanan'
-                  ? 'Bulanan'
-                  : chartPeriod === 'tahunan'
-                  ? 'Tahunan'
-                  : 'Harian'}
-              </span>
-            </button>
-            <div className="flex items-center p-1.5 bg-gray-100/90 rounded-2xl gap-1 border border-gray-200/80">
+          {/* Tombol Cetak di Sebelah Kiri Tepat di Atas Ikon Harian */}
+          <div className="flex flex-col items-start gap-2 self-start lg:self-center">
+            {onOpenFinancialReport && (
+              <button
+                type="button"
+                onClick={onOpenFinancialReport}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-brand-darkmaroon font-bold text-xs shadow-sm transition active:scale-95"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>
+                  Cetak Laporan{' '}
+                  {chartPeriod === 'bulanan'
+                    ? 'Bulanan'
+                    : chartPeriod === 'tahunan'
+                    ? 'Tahunan'
+                    : 'Harian'}
+                </span>
+              </button>
+            )}
+
+            {/* Filter Tabs */}
+            <div className="flex items-center p-1 bg-gray-100/90 rounded-2xl gap-1 border border-gray-200/80">
               <button
                 type="button"
                 onClick={() => {
                   setChartPeriod('harian');
                   setHoveredBarIndex(null);
                 }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                   chartPeriod === 'harian'
                     ? 'bg-brand-maroon text-white shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
@@ -189,7 +193,7 @@ export default function OwnerStatsCards({
                   setChartPeriod('mingguan');
                   setHoveredBarIndex(null);
                 }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                   chartPeriod === 'mingguan'
                     ? 'bg-brand-maroon text-white shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
@@ -204,7 +208,7 @@ export default function OwnerStatsCards({
                   setChartPeriod('bulanan');
                   setHoveredBarIndex(null);
                 }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                   chartPeriod === 'bulanan'
                     ? 'bg-brand-maroon text-white shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
@@ -219,7 +223,7 @@ export default function OwnerStatsCards({
                   setChartPeriod('tahunan');
                   setHoveredBarIndex(null);
                 }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                   chartPeriod === 'tahunan'
                     ? 'bg-brand-maroon text-white shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
@@ -232,43 +236,46 @@ export default function OwnerStatsCards({
           </div>
         </div>
 
-        {/* 4 Mini Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-amber-50/50 border border-amber-200/60 rounded-2xl p-3.5">
-            <span className="text-[11px] font-semibold text-amber-900/70 block">Omset Periode</span>
-            <span className="text-base sm:text-lg font-black text-amber-900">
-              Rp {periodOmset.toLocaleString('id-ID')}
-            </span>
-            <span className="text-[10px] text-amber-700/80 block mt-0.5">{periodTx} Total Pesanan</span>
+        {/* Ringkasan Ringkas Periode (Sleek Inline Metric Strip - Pengganti 4 Kotak Duplikat) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-gray-50/90 rounded-2xl border border-gray-200/70 text-xs">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 font-medium">Omset Periode:</span>
+              <span className="font-extrabold text-gray-900">
+                Rp {periodOmset.toLocaleString('id-ID')}
+              </span>
+              <span className="text-[11px] text-gray-400">({periodTx} pesanan)</span>
+            </div>
+
+            <div className="h-3.5 w-px bg-gray-300 hidden sm:block" />
+
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 font-medium">Kas Masuk:</span>
+              <span className="font-extrabold text-emerald-600">
+                Rp {periodLunas.toLocaleString('id-ID')}
+              </span>
+              <span className="text-[10px] text-emerald-700/80 font-medium">
+                ({periodOmset > 0 ? Math.round((periodLunas / periodOmset) * 100) : 0}%)
+              </span>
+            </div>
+
+            <div className="h-3.5 w-px bg-gray-300 hidden sm:block" />
+
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 font-medium">Piutang:</span>
+              <span className="font-extrabold text-amber-600">
+                Rp {periodPending.toLocaleString('id-ID')}
+              </span>
+            </div>
           </div>
 
-          <div className="bg-emerald-50/50 border border-emerald-200/60 rounded-2xl p-3.5">
-            <span className="text-[11px] font-semibold text-emerald-900/70 block">Kas Masuk (Lunas)</span>
-            <span className="text-base sm:text-lg font-black text-emerald-800">
-              Rp {periodLunas.toLocaleString('id-ID')}
-            </span>
-            <span className="text-[10px] text-emerald-700/80 block mt-0.5">
-              {periodOmset > 0 ? Math.round((periodLunas / periodOmset) * 100) : 0}% Terverifikasi
-            </span>
-          </div>
-
-          <div className="bg-orange-50/50 border border-orange-200/60 rounded-2xl p-3.5">
-            <span className="text-[11px] font-semibold text-orange-900/70 block">Piutang / Pending</span>
-            <span className="text-base sm:text-lg font-black text-orange-800">
-              Rp {periodPending.toLocaleString('id-ID')}
-            </span>
-            <span className="text-[10px] text-orange-700/80 block mt-0.5">Belum Terbayar</span>
-          </div>
-
-          <div className="bg-blue-50/50 border border-blue-200/60 rounded-2xl p-3.5">
-            <span className="text-[11px] font-semibold text-blue-900/70 block">Puncak Tertinggi</span>
-            <span className="text-base sm:text-lg font-black text-blue-900 truncate block">
-              {maxItem && maxItem.omset > 0 ? `Rp ${maxItem.omset.toLocaleString('id-ID')}` : 'Rp 0'}
-            </span>
-            <span className="text-[10px] text-blue-700/80 block mt-0.5 truncate">
-              {maxItem && maxItem.omset > 0 ? `${maxItem.label} (${maxItem.subLabel})` : 'Belum Ada Transaksi'}
-            </span>
-          </div>
+          {maxItem && maxItem.omset > 0 && (
+            <div className="flex items-center gap-1.5 text-gray-500 text-[11px] bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs">
+              <span className="text-gray-400">Puncak:</span>
+              <span className="font-bold text-gray-900">Rp {maxItem.omset.toLocaleString('id-ID')}</span>
+              <span className="text-brand-maroon font-semibold">({maxItem.label})</span>
+            </div>
+          )}
         </div>
 
         {/* Hover Tooltip */}
