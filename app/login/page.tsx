@@ -87,8 +87,12 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20 relative">
         {/* Header (SDD Bab V Mockup Masuk) */}
         <div className="text-center mb-5">
-          <div className="w-16 h-16 rounded-full bg-brand-50 text-brand-maroon mx-auto flex items-center justify-center mb-3 shadow-inner border border-brand-100">
-            <User className="w-8 h-8" />
+          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-amber-400 mx-auto mb-3 shadow-xl bg-amber-950 flex items-center justify-center ring-4 ring-amber-400/20">
+            <img
+              src="/images/logo-ekrupsy.jpg"
+              alt="Logo E-KrupSy"
+              className="w-full h-full object-cover scale-105"
+            />
           </div>
           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Masuk Akun</h2>
           <p className="text-xs text-gray-500 mt-1 mb-2.5">

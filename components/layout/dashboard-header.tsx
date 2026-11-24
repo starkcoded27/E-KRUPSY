@@ -63,8 +63,12 @@ export default function DashboardHeader() {
           <div className="flex items-center justify-between h-16">
             {/* Logo & Title */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-amber-300 tracking-wider shadow-inner">
-                KD
+              <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-amber-400/80 shadow-md bg-amber-950 flex items-center justify-center shrink-0 ring-2 ring-black/20">
+                <img
+                  src="/images/logo-ekrupsy.jpg"
+                  alt="Logo E-KrupSy"
+                  className="w-full h-full object-cover scale-105"
+                />
               </div>
               <div>
                 <span className="text-lg font-black tracking-wide text-white block leading-tight">

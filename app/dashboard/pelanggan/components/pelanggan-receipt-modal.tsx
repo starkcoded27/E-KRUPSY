@@ -32,8 +32,12 @@ export default function PelangganReceiptModal({
 
         {/* Digital Pass Header */}
         <div className="text-center pb-4 border-b border-dashed border-gray-200">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-black text-2xl mx-auto flex items-center justify-center mb-2 shadow-lg shadow-emerald-600/20">
-            <ShieldCheck className="w-8 h-8" />
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400 mx-auto mb-2 shadow-md bg-amber-950 flex items-center justify-center ring-2 ring-emerald-500/20">
+            <img
+              src="/images/logo-ekrupsy.jpg"
+              alt="Logo E-KrupSy"
+              className="w-full h-full object-cover scale-105"
+            />
           </div>
           <h3 className="font-black text-gray-900 text-lg uppercase tracking-wide">Pabrik Kerupuk Diansyah</h3>
           <p className="text-[11px] text-gray-500">Jl. Pangeran Kornel No. 204, Pasanggrahan Baru, Sumedang</p>

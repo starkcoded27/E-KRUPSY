@@ -22,9 +22,13 @@ export default function WelcomePage() {
     <div className="min-h-screen bg-gradient-to-b from-brand-maroon via-brand-darkmaroon to-[#3a0608] flex flex-col justify-between text-white">
       {/* Top Bar / Header */}
       <header className="px-6 py-4 flex items-center justify-between max-w-5xl mx-auto w-full">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-full bg-amber-400 text-brand-darkmaroon flex items-center justify-center font-black text-lg shadow-lg">
-            KD
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-amber-400 shadow-lg bg-amber-950 flex items-center justify-center shrink-0">
+            <img
+              src="/images/logo-ekrupsy.jpg"
+              alt="Logo E-KrupSy"
+              className="w-full h-full object-cover scale-105"
+            />
           </div>
           <div>
             <h1 className="text-xl font-extrabold tracking-tight text-white leading-tight">E-KRUPSY</h1>
@@ -59,14 +63,18 @@ export default function WelcomePage() {
 
           {/* Logo Brand Emblem */}
           <div className="text-center mb-6">
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-brand-maroon text-amber-300 flex items-center justify-center font-black text-3xl shadow-xl ring-4 ring-amber-400/30 mb-3">
-              KD
+            <div className="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-amber-400 shadow-2xl bg-amber-950 flex items-center justify-center mb-3 ring-4 ring-amber-400/30">
+              <img
+                src="/images/logo-ekrupsy.jpg"
+                alt="Logo E-KrupSy"
+                className="w-full h-full object-cover scale-105"
+              />
             </div>
             <h2 className="text-2xl font-black text-gray-900 tracking-tight">
               Selamat Datang
             </h2>
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Sistem Informasi Pemesanan & Produksi Terpadu Pabrik Kerupuk Diansyah
+              Sistem Informasi Pemesanan &amp; Produksi Terpadu Pabrik Kerupuk Diansyah
             </p>
           </div>
 

@@ -5,6 +5,11 @@ import { AuthProvider } from '@/context/auth-context';
 export const metadata: Metadata = {
   title: 'E-KRUPSY - Pabrik Kerupuk Diansyah',
   description: 'Sistem Informasi Pemesanan dan Produksi Pabrik Kerupuk Diansyah Berbasis Web',
+  icons: {
+    icon: '/images/logo-ekrupsy.jpg',
+    shortcut: '/images/logo-ekrupsy.jpg',
+    apple: '/images/logo-ekrupsy.jpg',
+  },
 };
 
 export default function RootLayout({

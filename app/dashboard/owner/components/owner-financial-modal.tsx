@@ -319,8 +319,12 @@ export function OwnerFinancialModal({
               {/* Kop Resmi Dokumen */}
               <div className="text-center pb-4 border-b-2 border-gray-900">
                 <div className="flex items-center justify-center gap-3 mb-1">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-2xl flex items-center justify-center shadow">
-                    KD
+                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-amber-500 flex items-center justify-center shadow shrink-0">
+                    <img
+                      src="/images/logo-ekrupsy.jpg"
+                      alt="Logo E-KrupSy"
+                      className="w-full h-full object-cover scale-105"
+                    />
                   </div>
                   <div className="text-left">
                     <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">
@@ -585,8 +589,12 @@ export function OwnerFinancialModal({
           {/* KOP RESMI LAPORAN PABRIK KERUPUK DIANSYAH */}
           <div className="text-center pb-4 border-b-2 border-black">
             <div className="flex items-center justify-center gap-3 mb-1">
-              <div className="w-12 h-12 rounded-2xl bg-black text-white font-black text-2xl flex items-center justify-center">
-                KD
+              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-black flex items-center justify-center shrink-0">
+                <img
+                  src="/images/logo-ekrupsy.jpg"
+                  alt="Logo E-KrupSy"
+                  className="w-full h-full object-cover scale-105"
+                />
               </div>
               <div className="text-left">
                 <h2 className="text-2xl font-black text-black tracking-tight uppercase">

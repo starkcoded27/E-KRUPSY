@@ -28,8 +28,12 @@ export default function OwnerReceiptModal({ order, onClose }: OwnerReceiptModalP
 
           {/* Header Resi Pabrik */}
           <div className="text-center pb-4 border-b border-dashed border-gray-300">
-            <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-xl mx-auto flex items-center justify-center mb-2 shadow">
-              KD
+            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-amber-400 mx-auto mb-2 shadow-md bg-amber-950 flex items-center justify-center">
+              <img
+                src="/images/logo-ekrupsy.jpg"
+                alt="Logo E-KrupSy"
+                className="w-full h-full object-cover scale-105"
+              />
             </div>
             <h3 className="font-black text-gray-900 text-lg uppercase tracking-wide">
               Pabrik Kerupuk Diansyah
@@ -160,8 +164,12 @@ export default function OwnerReceiptModal({ order, onClose }: OwnerReceiptModalP
           <div>
             <div className="text-center pb-4 border-b-2 border-gray-900">
               <div className="flex items-center justify-center gap-3 mb-1">
-                <div className="w-12 h-12 rounded-2xl bg-brand-maroon text-amber-300 font-black text-2xl flex items-center justify-center shadow">
-                  KD
+                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-amber-500 flex items-center justify-center shadow shrink-0">
+                  <img
+                    src="/images/logo-ekrupsy.jpg"
+                    alt="Logo E-KrupSy"
+                    className="w-full h-full object-cover scale-105"
+                  />
                 </div>
                 <div className="text-left">
                   <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">
